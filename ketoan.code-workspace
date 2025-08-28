@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": ".venv"
+		},
+		{
+			"path": "PhanMemKeToan_backend"
+		},
+		{
+			"path": "PhanMemKeToan-frontend"
+		}
+	],
+	"settings": {}
+}

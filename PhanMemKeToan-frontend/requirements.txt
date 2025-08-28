@@ -1,0 +1,26 @@
+# Core Flask framework
+Flask==2.3.3
+
+# HTTP client for API calls
+requests==2.31.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Jinja2 template engine (included with Flask)
+# Jinja2==3.1.2
+
+# Session management
+Flask-Session==0.5.0
+
+# Security headers
+Flask-Talisman==1.1.0
+
+# CORS support
+Flask-CORS==4.0.0
+
+# Logging
+colorlog==6.7.0
+
+# Date/time utilities
+python-dateutil==2.8.2

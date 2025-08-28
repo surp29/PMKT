@@ -1,0 +1,1198 @@
+
+{% extends "base.html" %}
+{% block title %}Bảng giá{% endblock %}
+{% block content %}
+<h2><i class="fas fa-tags"></i> Bảng giá</h2>
+
+  <div class="filter-bar">
+    <div class="filter-item">
+      <label>Mã Bảng Giá</label>
+      <input type="text" id="priceCodeFilter" placeholder="Nhập mã bảng giá">
+    </div>
+    <div class="filter-item">
+      <label>Loại Bảng Giá</label>
+      <select id="priceTypeFilter">
+        <option>Tất cả</option>
+        <option>Sản phẩm</option>
+        <option>Hành động</option>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Tên Bảng Giá</label>
+      <input type="text" id="priceNameFilter" placeholder="Nhập tên bảng giá">
+    </div>
+
+    <button class="clear-btn" onclick="clearPriceFilters()" style="width: 120px; height: 38px; padding: 8px 16px; border: none; border-radius: 4px; background: #6c757d; color: white; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 0; align-self: center;"><i class="fas fa-times"></i> Xóa bộ lọc</button>
+  </div>
+
+  <div class="toolbar">
+    <button onclick="openAddPriceModal()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 5px;"><i class="fas fa-plus"></i> Thêm bảng giá mới</button>
+
+    <span style="margin-left:auto;color:#000;">Tổng: <strong class="total-count">{{ prices|length }}</strong> bảng giá</span>
+  </div>
+
+<table class="product-table">
+                 <thead>
+         <tr>
+           <th style="text-align:center;">STT</th>
+           <th style="text-align:center;">Mã sản phẩm</th>
+           <th style="text-align:center;">Loại sản phẩm</th>
+           <th style="text-align:center;">Tên sản phẩm</th>
+
+           <th style="text-align:center;">Giá vốn</th>
+           <th style="text-align:center;">Giá chung</th>
+           <th style="text-align:center;">Hành động</th>
+         </tr>
+       </thead>
+      <tbody>
+      {% if prices %}
+        {% for price in prices %}
+        <tr data-price-id="{{ price.id }}">
+          <td style="text-align:center;">{{ loop.index }}</td>
+          <td style="text-align:center;">{{ price.ma_sp }}</td>
+          <td style="text-align:center;">{{ price.loai_sp if price.loai_sp else 'Hành động' }}</td>
+          <td style="text-align:center;">{{ price.ten_sp }}</td>
+          <td style="text-align:center;">{{ "{:,.0f}".format(price.gia_von) if price.gia_von else 0 }} VNĐ</td>
+          <td style="text-align:center;">{{ "{:,.0f}".format(price.gia_chung) if price.gia_chung else 0 }} VNĐ</td>
+          <td style="text-align:center;">
+            <div style="display:flex;gap:5px;justify-content:center;">
+              <button class="btn-edit-price" data-id="{{ price.id }}" data-stt="{{ loop.index }}" style="width:60px;height:32px;background:#007bff;color:white;border:none;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:3px;">
+                <i class="fas fa-edit"></i> Sửa
+              </button>
+              <button class="btn-delete-price" data-id="{{ price.id }}" style="width:60px;height:32px;background:#dc3545;color:white;border:none;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:3px;">
+                <i class="fas fa-trash"></i> Xóa
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+    {% else %}
+      <tr><td colspan="7" style="text-align:center;">Không có dữ liệu</td></tr>
+    {% endif %}
+  </tbody>
+  </table>
+  
+  <!-- Modal Sửa Bảng Giá -->
+  <div id="editPriceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin: 0; text-align: center; flex: 1; color: white;">Sửa Bảng Giá</h3>
+        <span class="close" id="closeEditX">&times;</span>
+      </div>
+      <form id="editPriceForm">
+        <input type="hidden" id="editPriceId">
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Mã Bảng Giá*</label>
+            <input type="text" id="editPriceCode" required readonly style="background:#f8f9fa; width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Tên Bảng Giá*</label>
+            <input type="text" id="editPriceName" required readonly style="background:#f8f9fa; width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Loại Bảng Giá</label>
+            <select id="editPriceTypeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="">Chọn loại bảng giá</option>
+              <option value="Sản phẩm">Sản phẩm</option>
+              <option value="Hành động">Hành động</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Giá chung* (VNĐ)</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="text" id="editPriceGiaChung" required class="money-input-field" oninput="validateAndFormatPrice(this)" placeholder="Nhập giá chung" style="flex:1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <span>VNĐ</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Giá vốn* (VNĐ)</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="text" id="editPriceGiaVon" required class="money-input-field" oninput="validateAndFormatPrice(this)" placeholder="Nhập giá vốn" style="flex:1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <span>VNĐ</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="save-btn" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px;">Cập nhật bảng giá</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Success Modal (page specific) -->
+  <div id="priceSuccessModal" class="modal confirm-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:rgba(0, 0, 0, 0.5); align-items:center; justify-content:center;">
+    <div class="modal-content">
+      <div class="modal-header" style="justify-content: center; background: linear-gradient(135deg, #28a745, #20c997);">
+        <h3 style="margin: 0; text-align: center; color: white;">Thành công</h3>
+      </div>
+      <div class="modal-body">
+        <div style="text-align: center; padding: 20px;">
+          <i class="fas fa-check-circle" style="font-size: 48px; color: #28a745; margin-bottom: 15px;"></i>
+          <p id="priceSuccessMessage" style="font-size: 16px; margin: 0; color: #333;">Thành công!</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btnPriceSuccessOK" class="btn-confirm" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Xác nhận xóa bảng giá -->
+  <div id="confirmDeleteModal" class="modal confirm-modal">
+    <div class="modal-content">
+      <div class="modal-header" style="justify-content: center; background: linear-gradient(135deg, #dc3545, #c82333);">
+        <h3 style="margin: 0; text-align: center; color: white;">Xác nhận xóa</h3>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <div style="text-align: center;">
+          <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545; margin-bottom: 15px;"></i>
+          <p style="font-size: 16px; margin: 0 0 10px 0; color: #333;">Bạn có chắc chắn muốn xóa bảng giá này?</p>
+          <p style="font-weight: bold; color: #dc3545; margin: 0; font-size: 14px;" id="deletePriceInfo"></p>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 15px 20px; text-align: center; border-top: 1px solid #eee;">
+        <button id="btnCancelDelete" class="btn-cancel" style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Hủy</button>
+        <button id="btnConfirmDelete" style="background: #dc3545; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">Xóa</button>
+      </div>
+    </div>
+  </div>
+  
+
+  
+
+  
+  <!-- Modal thêm bảng giá -->
+  <div id="addPriceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="margin: 0; text-align: center; flex: 1; color: white;">Thêm bảng giá mới</h3>
+        <span class="close" id="closeAddX">&times;</span>
+      </div>
+      <form id="addPriceForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Mã Bảng Giá*</label>
+            <input type="text" id="priceCode" placeholder="Nhập mã bảng giá" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Tên Bảng Giá*</label>
+            <input type="text" id="priceName" placeholder="Nhập tên bảng giá" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Loại Bảng Giá</label>
+            <select id="priceTypeSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="">Chọn loại bảng giá</option>
+              <option value="Sản phẩm">Sản phẩm</option>
+              <option value="Hành động">Hành động</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Giá chung* (VNĐ)</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="text" id="priceGiaChung" placeholder="Nhập giá chung" required class="money-input-field" oninput="validateAndFormatPrice(this)" style="flex:1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <span>VNĐ</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 0.85em; color: #555; margin-bottom: 5px;">Giá vốn* (VNĐ)</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="text" id="priceGiaVon" placeholder="Nhập giá vốn" required class="money-input-field" oninput="validateAndFormatPrice(this)" style="flex:1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <span>VNĐ</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="save-btn" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px;">Lưu bảng giá</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Modal Xác nhận thoát -->
+  <div id="confirmExitModal" class="modal confirm-modal">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #ffc107, #e0a800);">
+        <h3 style="margin: 0; text-align: center; flex: 1; color: white;">Xác nhận</h3>
+        <span class="close" id="closeConfirmX" style="color: white;">&times;</span>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <div style="text-align: center;">
+          <i class="fas fa-question-circle" style="font-size: 48px; color: #ffc107; margin-bottom: 15px;"></i>
+          <p id="confirmMessage" style="font-size: 16px; margin: 0; color: #333;">Bạn có muốn thoát không?</p>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 15px 20px; text-align: center; border-top: 1px solid #eee;">
+        <button id="btnStay" class="btn-cancel" style="background: #6c757d; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Không</button>
+        <button id="btnLeave" class="btn-confirm" style="background: #ffc107; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer;">Có</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+// ====== LƯU Ý QUAN TRỌNG: BẢNG GIÁ HOÀN TOÀN ĐỘC LẬP ======
+// 
+// 1. Bảng giá hoàn toàn tách biệt với sản phẩm:
+//    - Không có tham chiếu đến bảng products
+//    - Không có chức năng tìm kiếm sản phẩm
+//    - Không có liên kết với trang quản lý sản phẩm
+//    - Không có product_id
+//
+// 2. Khi thêm bảng giá mới:
+//    - Chỉ tạo bảng giá độc lập
+//    - Không tạo sản phẩm mới
+//    - Không có liên kết với product
+//
+// 3. Khi cập nhật bảng giá:
+//    - Chỉ cập nhật thông tin giá
+//    - Không thay đổi sản phẩm
+//
+// ====== KẾT THÚC LƯU Ý ======
+
+// Biến lưu trạng thái form
+let originalFormData = {};
+let isFormChanged = false;
+
+// Biến lưu danh sách bảng giá
+let allPrices = [];
+
+// Biến lưu thông tin bảng giá cần xóa
+let priceToDelete = null;
+
+// Biến lưu trạng thái form sửa (để cảnh báo khi thoát nếu có thay đổi)
+let editPriceOriginalState = null;
+
+function getEditPriceFormState() {
+    const id = document.getElementById('editPriceId')?.value || '';
+    const loai = document.getElementById('editPriceTypeSelect')?.value || '';
+    const giaChung = (document.getElementById('editPriceGiaChung')?.value || '').replace(/[,]/g, '');
+    const giaVon = (document.getElementById('editPriceGiaVon')?.value || '').replace(/[,]/g, '');
+    return { id, loai, giaChung, giaVon };
+}
+
+function saveEditPriceOriginalState() {
+    editPriceOriginalState = JSON.stringify(getEditPriceFormState());
+}
+
+function hasEditPriceChanged() {
+    if (!editPriceOriginalState) return false;
+    return JSON.stringify(getEditPriceFormState()) !== editPriceOriginalState;
+}
+
+// Hiển thị popup thành công (riêng trang) với kiểm tra an toàn
+function showPageSuccess(message, onClose) {
+    const modal = document.getElementById('priceSuccessModal');
+    const msgEl = document.getElementById('priceSuccessMessage');
+    const okBtn = document.getElementById('btnPriceSuccessOK');
+    if (modal && msgEl && okBtn) {
+        msgEl.textContent = message || 'Thành công!';
+        const close = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', close);
+            modal.removeEventListener('click', overlayHandler);
+            if (typeof onClose === 'function') onClose();
+        };
+        const overlayHandler = (e) => { if (e.target === modal) close(); };
+        okBtn.addEventListener('click', close);
+        modal.addEventListener('click', overlayHandler);
+        modal.style.display = 'flex';
+    } else {
+        // Fallback nếu phần tử chưa có trong DOM
+        if (window.showSuccessModal) { showSuccessModal(message || 'Thành công!'); } else { alert(message || 'Thành công!'); }
+        if (typeof onClose === 'function') onClose();
+    }
+}
+
+// Hàm debounce để tối ưu tìm kiếm
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+
+
+
+
+
+
+function updatePrice(priceId, field, value) {
+    // Loại bỏ dấu phẩy và chuyển thành số
+    const numericValue = parseInt(value.replace(/,/g, '')) || 0;
+    
+    fetch(`{{ BACKEND_URL }}/api/prices/${priceId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            field: field,
+            value: numericValue
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cập nhật giá trị hiển thị với định dạng số
+            const input = event.target;
+            input.value = numericValue.toLocaleString('vi-VN');
+        } else {
+            if (window.showErrorModal) { showErrorModal('Lỗi: ' + (data.message || 'Không xác định')); } else { alert('Lỗi: ' + (data.message || 'Không xác định')); }
+            // Khôi phục giá trị cũ
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (window.showErrorModal) { showErrorModal('Có lỗi xảy ra khi cập nhật giá!'); } else { alert('Có lỗi xảy ra khi cập nhật giá!'); }
+        location.reload();
+    });
+}
+
+// Format số khi nhập
+document.addEventListener('input', function(e) {
+    if (e.target.type === 'text' && e.target.style.textAlign === 'center') {
+        let value = e.target.value.replace(/[^\d]/g, '');
+        if (value) {
+            e.target.value = parseInt(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+    }
+});
+
+// Hàm chuẩn hóa văn bản tiếng Việt để tìm kiếm
+function normalizeVietnameseText(text) {
+    if (!text) return "";
+    
+    // Mapping dấu tiếng Việt sang không dấu
+    const vietnameseMap = {
+        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+        'đ': 'd',
+        'À': 'A', 'Á': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
+        'Ă': 'A', 'Ằ': 'A', 'Ắ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
+        'Â': 'A', 'Ầ': 'A', 'Ấ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
+        'È': 'E', 'É': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
+        'Ê': 'E', 'Ề': 'E', 'Ế': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
+        'Ì': 'I', 'Í': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
+        'Ò': 'O', 'Ó': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
+        'Ô': 'O', 'Ồ': 'O', 'Ố': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
+        'Ơ': 'O', 'Ờ': 'O', 'Ớ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
+        'Ù': 'U', 'Ú': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
+        'Ư': 'U', 'Ừ': 'U', 'Ứ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
+        'Ỳ': 'Y', 'Ý': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
+        'Đ': 'D'
+    };
+    
+    // Thay thế dấu tiếng Việt
+    let normalized = text;
+    for (const [accented, plain] of Object.entries(vietnameseMap)) {
+        normalized = normalized.replace(new RegExp(accented, 'g'), plain);
+    }
+    
+    // Chuyển về chữ thường và loại bỏ khoảng trắng thừa
+    normalized = normalized.toLowerCase().trim();
+    
+    return normalized;
+}
+
+// Hàm tìm kiếm linh hoạt - hỗ trợ tìm kiếm dính liền và tách rời
+function flexibleSearch(searchText, targetText) {
+    if (!searchText || !targetText) return false;
+    
+    // Chuẩn hóa cả hai văn bản
+    const normalizedSearch = normalizeVietnameseText(searchText);
+    const normalizedTarget = normalizeVietnameseText(targetText);
+    
+    // 1. Tìm kiếm trực tiếp (bao gồm cả dính liền)
+    if (normalizedTarget.includes(normalizedSearch)) {
+        return true;
+    }
+    
+    // 2. Tìm kiếm khi tách từ (nếu searchText có thể tách thành nhiều từ)
+    const searchWords = normalizedSearch.split(/\s+/).filter(word => word.length > 0);
+    if (searchWords.length > 1) {
+        // Nếu có nhiều từ, kiểm tra xem tất cả từ có xuất hiện trong target không
+        return searchWords.every(word => normalizedTarget.includes(word));
+    }
+    
+    // 3. Tìm kiếm khi ghép từ (nếu searchText có thể là từ ghép)
+    if (normalizedSearch.length > 3) {
+        // Thử tách thành các từ có thể có
+        const possibleCombinations = generatePossibleCombinations(normalizedSearch);
+        for (const combination of possibleCombinations) {
+            if (normalizedTarget.includes(combination)) {
+                return true;
+            }
+        }
+    }
+    
+    // 4. Tìm kiếm fuzzy - kiểm tra độ tương tự
+    if (calculateSimilarity(normalizedSearch, normalizedTarget) > 0.7) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Hàm tạo các tổ hợp từ có thể có từ một chuỗi dính liền
+function generatePossibleCombinations(text) {
+    const combinations = [];
+    
+    // Thêm chính nó
+    combinations.push(text);
+    
+    // Thêm các biến thể có thể có
+    if (text.length > 4) {
+        // Thử chèn khoảng trắng ở các vị trí khác nhau
+        for (let i = 2; i < text.length - 1; i++) {
+            const part1 = text.substring(0, i);
+            const part2 = text.substring(i);
+            combinations.push(part1 + ' ' + part2);
+        }
+    }
+    
+    // Thêm các biến thể thay thế ký tự tương tự
+                const similarChars = {
+                    'd': ['d', 'đ'],
+                    'i': ['i', 'y'],
+                    'y': ['i', 'y'],
+                    'u': ['u', 'ư'],
+                    'ư': ['u', 'ư'],
+                    'o': ['o', 'ô', 'ơ'],
+                    'ô': ['o', 'ô', 'ơ'],
+                    'ơ': ['o', 'ô', 'ơ'],
+                    'a': ['a', 'ă', 'â'],
+                    'ă': ['a', 'ă', 'â'],
+                    'â': ['a', 'ă', 'â'],
+                    'e': ['e', 'ê'],
+                    'ê': ['e', 'ê']
+                };
+                
+    // Tạo biến thể với các ký tự tương tự
+    for (const [char, alternatives] of Object.entries(similarChars)) {
+        if (text.includes(char)) {
+            for (const alt of alternatives) {
+                if (alt !== char) {
+                    combinations.push(text.replace(new RegExp(char, 'g'), alt));
+                }
+            }
+        }
+    }
+    
+    return combinations;
+}
+
+// Hàm tính độ tương tự giữa hai chuỗi (Levenshtein distance)
+function calculateSimilarity(str1, str2) {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+            if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    
+    const maxLength = Math.max(str1.length, str2.length);
+    const similarity = 1 - (matrix[str2.length][str1.length] / maxLength);
+    return similarity;
+}
+
+// Lọc bảng giá với fuzzy search như trang sản phẩm
+function filterPrices() {
+    const codeFilter = normalizeVietnameseText(document.getElementById('priceCodeFilter').value);
+    const typeFilter = document.getElementById('priceTypeFilter').value;
+    const nameFilter = normalizeVietnameseText(document.getElementById('priceNameFilter').value);
+    
+    console.log('Search filters:', { codeFilter, typeFilter, nameFilter });
+    
+    const rows = document.querySelectorAll('.product-table tbody tr');
+    console.log('Total rows found:', rows.length);
+    let visibleCount = 0;
+    
+    rows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 0) return; // Skip header row
+        
+        const code = normalizeVietnameseText(cells[1].textContent.trim()); // Mã sản phẩm
+        const type = cells[2].textContent.trim(); // Loại sản phẩm
+        const name = normalizeVietnameseText(cells[3].textContent.trim()); // Tên sản phẩm
+        
+        console.log(`Row ${index}:`, { code, type, name });
+        
+        let show = true;
+        
+        		// Lọc theo mã sản phẩm - sử dụng tìm kiếm linh hoạt
+		if (codeFilter && !flexibleSearch(codeFilter, code)) {
+                show = false;
+            }
+		
+		// Lọc theo loại sản phẩm (không cần chuẩn hóa vì là dropdown)
+		if (typeFilter !== 'Tất cả' && type !== typeFilter) {
+			show = false;
+		}
+		
+		// Lọc theo tên sản phẩm - sử dụng tìm kiếm linh hoạt
+		if (nameFilter && !flexibleSearch(nameFilter, name)) {
+			show = false;
+        }
+        
+
+        
+        if (show) {
+            row.style.display = '';
+            visibleCount++;
+            // Cập nhật STT
+            cells[0].textContent = visibleCount;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+            console.log(`Kết quả tìm kiếm: ${visibleCount} bảng giá được hiển thị`);
+    
+            // Cập nhật tổng số bảng giá
+        const totalElement = document.querySelector('.toolbar span strong');
+        if (totalElement) {
+            totalElement.textContent = visibleCount;
+        }
+}
+
+// Xóa bộ lọc
+function clearPriceFilters() {
+    document.getElementById('priceCodeFilter').value = '';
+    document.getElementById('priceTypeFilter').value = 'Tất cả';
+    document.getElementById('priceNameFilter').value = '';
+    filterPrices();
+}
+
+
+// Hàm kiểm tra form thêm có dữ liệu hay không
+function hasAddFormData() {
+    const form = document.getElementById('addPriceForm');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    for (let input of inputs) {
+        if (input.value && input.value.trim() !== '') {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Modal open/close
+let addModal, editModal, confirmModal, confirmDeleteModal;
+let __suppressConfirmClose = false; // bỏ xác nhận khi đang lưu/cập nhật
+
+// Khởi tạo modals sau khi DOM load
+function initializeModals() {
+    addModal = document.getElementById('addPriceModal');
+    editModal = document.getElementById('editPriceModal');
+    confirmModal = document.getElementById('confirmExitModal');
+    confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    
+    if (!addModal || !editModal || !confirmModal || !confirmDeleteModal) {
+        console.error('Không thể tìm thấy một số modal elements');
+    }
+}
+
+function openAddPriceModal() {
+    if (!addModal) {
+        console.error('Modal add chưa được khởi tạo');
+        return;
+    }
+    // Reset form về trống
+    document.getElementById('addPriceForm').reset();
+    originalFormData = {};
+    isFormChanged = false;
+    addModal.classList.add('show');
+    
+
+    
+
+    
+    // Reset form về trống
+    document.getElementById('addPriceForm').reset();
+}
+
+
+
+// Hàm thêm bảng giá mới (hoàn toàn độc lập)
+function addNewPrice(maSp, tenSp, nhomSp, loaiSp, giaBan, giaChung) {
+    console.log('Adding new price:', maSp, tenSp, nhomSp, loaiSp, giaBan, giaChung);
+    
+    const formData = {
+        ma_sp: maSp,
+        ten_sp: tenSp,
+        nhom_sp: nhomSp,
+        loai_sp: loaiSp,
+        gia_von: giaBan,
+        gia_chung: giaChung,
+        // Thêm flag để backend biết đây là bảng giá độc lập
+        is_price_only: true
+    };
+    
+    fetch(`{{ BACKEND_URL }}/api/prices/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (window.showSuccessModal) { showSuccessModal('Đã thêm bảng giá ' + maSp + ' thành công!'); } else { alert('Đã thêm bảng giá ' + maSp + ' thành công!'); }
+            location.reload(); // Reload để cập nhật trạng thái
+        } else {
+            if (window.showErrorModal) { showErrorModal('Lỗi: ' + (data.message || 'Không xác định')); } else { alert('Lỗi: ' + (data.message || 'Không xác định')); }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (window.showErrorModal) { showErrorModal('Có lỗi xảy ra khi thêm bảng giá!'); } else { alert('Có lỗi xảy ra khi thêm bảng giá!'); }
+    });
+}
+
+
+
+// Reset form
+function resetPriceForm() {
+    document.getElementById('addPriceForm').reset();
+}
+
+function closeAddPriceModal() {
+    if (!addModal) {
+        console.error('Modal add chưa được khởi tạo');
+        return;
+    }
+    addModal.classList.remove('show');
+    document.getElementById('addPriceForm').reset();
+}
+
+function closeEditPriceModal() {
+    if (!editModal) {
+        console.error('Modal edit chưa được khởi tạo');
+        return;
+    }
+    editModal.classList.remove('show');
+    document.getElementById('editPriceForm').reset();
+}
+
+function openEditPriceModal(price, stt) {
+    try {
+        console.log('Opening edit modal for price:', price);
+        
+        // Kiểm tra dữ liệu price
+        if (!price || typeof price !== 'object') {
+            throw new Error('Dữ liệu bảng giá không hợp lệ');
+        }
+        
+        // Kiểm tra các element cần thiết
+        const editPriceId = document.getElementById('editPriceId');
+        const editPriceCode = document.getElementById('editPriceCode');
+        const editPriceName = document.getElementById('editPriceName');
+        const editPriceTypeSelect = document.getElementById('editPriceTypeSelect');
+        const editPriceGiaChung = document.getElementById('editPriceGiaChung');
+        const editPriceGiaVon = document.getElementById('editPriceGiaVon');
+        
+        if (!editPriceId || !editPriceCode || !editPriceName || !editPriceTypeSelect || !editPriceGiaChung || !editPriceGiaVon) {
+            throw new Error('Không tìm thấy các element form cần thiết');
+        }
+        
+        // Điền thông tin vào form
+        editPriceId.value = price.id || '';
+        editPriceCode.value = price.ma_sp || '';
+        editPriceName.value = price.ten_sp || '';
+        editPriceTypeSelect.value = price.loai_sp || 'Hành động';
+        editPriceGiaChung.value = price.gia_chung ? price.gia_chung.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+        editPriceGiaVon.value = price.gia_von ? price.gia_von.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+        
+        console.log('Form filled successfully');
+        
+        // Lưu lại trạng thái ban đầu để so sánh (sau khi đã điền form)
+        saveEditPriceOriginalState();
+        
+        // Kiểm tra editModal trước khi sử dụng
+        if (!editModal) {
+            throw new Error('Modal edit chưa được khởi tạo');
+        }
+        
+        editModal.classList.add('show');
+        
+    } catch (error) {
+        console.error('Error opening edit modal:', error);
+        if (window.showErrorModal) { showErrorModal('Lỗi mở form sửa: ' + error.message); } else { alert('Lỗi mở form sửa: ' + error.message); }
+    }
+}
+
+// Hàm cập nhật giao diện bảng ngay lập tức
+function updateTableRow(priceId, formData) {
+    // Tìm row cần cập nhật
+    const row = document.querySelector(`tr[data-price-id="${priceId}"]`);
+    if (!row) {
+        // Nếu không tìm thấy row có data-price-id, tìm theo nút edit
+        const editBtn = document.querySelector(`.btn-edit-price[data-id="${priceId}"]`);
+        if (editBtn) {
+            const row = editBtn.closest('tr');
+            if (row) {
+                updateRowData(row, formData);
+            }
+        }
+        return;
+    }
+    
+    updateRowData(row, formData);
+}
+
+// Hàm cập nhật dữ liệu trong row
+function updateRowData(row, formData) {
+    const cells = row.querySelectorAll('td');
+    
+    // Cập nhật cột "Loại sản phẩm" (cột thứ 3, index 2)
+    if (cells[2] && formData.loai_sp) {
+        cells[2].textContent = formData.loai_sp;
+    }
+    
+    // Cập nhật cột "Giá vốn" (cột thứ 6, index 5)
+    if (cells[5] && formData.gia_von) {
+        const giaVon = parseInt(formData.gia_von);
+        cells[5].textContent = giaVon.toLocaleString('vi-VN') + ' VNĐ';
+    }
+    
+    // Cập nhật cột "Giá chung" (cột thứ 7, index 6)
+    if (cells[6] && formData.gia_chung) {
+        const giaChung = parseInt(formData.gia_chung);
+        cells[6].textContent = giaChung.toLocaleString('vi-VN') + ' VNĐ';
+    }
+}
+
+// Sử dụng modal thành công dùng chung được khai báo trong base.html (showSuccessModal / hideSuccessModal)
+
+
+
+// Validate number input
+function validateNumber(input) {
+    // Loại bỏ tất cả ký tự không phải số
+    let value = input.value.replace(/[^0-9]/g, '');
+    
+    // Format số với dấu phẩy
+    if (value) {
+        value = parseInt(value).toLocaleString('vi-VN');
+    }
+    
+    input.value = value;
+}
+
+// Validate and format price input
+function validateAndFormatPrice(input) {
+    // Chỉ cho phép số nguyên dương
+    let value = input.value;
+    value = value.replace(/[^\d]/g, ''); // Chỉ giữ lại số
+    
+    if (value === '') {
+        input.value = '';
+        return;
+    }
+    
+    let num = parseInt(value);
+    if (num < 0) {
+        num = 0;
+    }
+    
+    // Tự động thêm dấu phẩy từ 1000 trở lên
+    if (num >= 1000) {
+        input.value = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    } else {
+        input.value = num;
+    }
+}
+
+
+// Handle form submission
+document.getElementById('addPriceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Gửi dữ liệu bảng giá độc lập
+
+    
+    const formData = {
+        ma_sp: document.getElementById('priceCode').value,
+        ten_sp: document.getElementById('priceName').value,
+        loai_sp: document.getElementById('priceTypeSelect').value || 'Hành động',
+        gia_von: parseFloat(document.getElementById('priceGiaVon').value.replace(/[,]/g, '')),
+        gia_chung: parseFloat(document.getElementById('priceGiaChung').value.replace(/[,]/g, ''))
+    };
+    
+    try {
+        console.log('Gửi dữ liệu:', formData);
+        const response = await fetch(`{{ BACKEND_URL }}/api/prices/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (response.ok && data.success) {
+            // Page-specific success
+            document.getElementById('priceSuccessMessage').textContent = 'Bảng giá đã được thêm thành công!';
+            const m = document.getElementById('priceSuccessModal');
+            const ok = document.getElementById('btnPriceSuccessOK');
+            const onClose = function(){ location.reload(); };
+            m.style.display = 'flex';
+            ok.onclick = function(){ m.style.display='none'; onClose(); };
+            m.onclick = function(e){ if (e.target===m){ m.style.display='none'; onClose(); } };
+            closeAddPriceModal();
+        } else {
+            const errorMsg = data.detail || data.message || 'Lỗi không xác định';
+            console.error('Backend error:', errorMsg);
+            if (window.showErrorModal) { showErrorModal(errorMsg); } else { alert('Lỗi: ' + errorMsg); }
+        }
+    } catch (error) {
+        console.error('Network error:', error);
+        if (window.showErrorModal) { showErrorModal('Có lỗi kết nối: ' + error.message); } else { alert('Có lỗi kết nối: ' + error.message); }
+    }
+});
+
+// Handle edit form submission
+document.getElementById('editPriceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const id = document.getElementById('editPriceId').value;
+    
+    // Cập nhật dữ liệu bảng giá
+    const formData = {
+        loai_sp: document.getElementById('editPriceTypeSelect').value || 'Hành động',
+        gia_von: parseFloat(document.getElementById('editPriceGiaVon').value.replace(/[,]/g, '')),
+        gia_chung: parseFloat(document.getElementById('editPriceGiaChung').value.replace(/[,]/g, ''))
+    };
+    
+    try {
+        console.log('Cập nhật bảng giá ID:', id, 'Data:', formData);
+        const r = await fetch(`{{ BACKEND_URL }}/api/prices/${id}`, { 
+            method: 'PUT', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify(formData) 
+        });
+        
+        console.log('Edit response status:', r.status);
+        const data = await r.json();
+        console.log('Edit response data:', data);
+        
+        if (r.ok && data.success) {
+            // Cập nhật giao diện ngay lập tức thay vì reload
+            updateTableRow(id, formData);
+            closeEditPriceModal();
+            
+            // Page-specific success
+            document.getElementById('priceSuccessMessage').textContent = 'Cập nhật bảng giá thành công!';
+            const m2 = document.getElementById('priceSuccessModal');
+            const ok2 = document.getElementById('btnPriceSuccessOK');
+            const onClose2 = function(){ location.reload(true); };
+            m2.style.display = 'flex';
+            ok2.onclick = function(){ m2.style.display='none'; onClose2(); };
+            m2.onclick = function(e){ if (e.target===m2){ m2.style.display='none'; onClose2(); } };
+            // Reset lại trạng thái ban đầu sau khi lưu thành công
+            saveEditPriceOriginalState();
+        } else {
+            const errorMsg = data.detail || data.message || 'Lỗi không xác định';
+            console.error('Edit backend error:', errorMsg);
+            throw new Error(errorMsg);
+        }
+    } catch(err) { 
+        console.error('Edit error:', err);
+        if (window.showErrorModal) { showErrorModal('Lỗi cập nhật: ' + (err.message || err)); } else { alert('Lỗi cập nhật: ' + (err.message || err)); }
+    }
+});
+
+// Attach button events
+document.getElementById('closeAddX').addEventListener('click', ()=>{
+    if (hasAddFormData()) {
+        document.getElementById('confirmMessage').textContent = 'Bạn có muốn hủy thêm bảng giá?';
+        confirmModal.classList.add('show');
+    } else {
+        closeAddPriceModal();
+    }
+});
+
+document.getElementById('closeEditX').addEventListener('click', ()=>{
+    if (hasEditPriceChanged()) {
+        document.getElementById('confirmMessage').textContent = 'Bạn có muốn hủy chỉnh sửa?';
+        confirmModal.classList.add('show');
+        // Gắn hành vi cho nút Có/Không
+        const stayBtn = document.getElementById('btnStay');
+        const leaveBtn = document.getElementById('btnLeave');
+        const onStay = ()=>{ confirmModal.classList.remove('show'); cleanup(); };
+        const onLeave = ()=>{ confirmModal.classList.remove('show'); closeEditPriceModal(); cleanup(); };
+        function cleanup(){
+            stayBtn.removeEventListener('click', onStay);
+            leaveBtn.removeEventListener('click', onLeave);
+        }
+        stayBtn.addEventListener('click', onStay);
+        leaveBtn.addEventListener('click', onLeave);
+    } else {
+        closeEditPriceModal();
+    }
+});
+
+document.getElementById('closeConfirmX').addEventListener('click', ()=>{ 
+    confirmModal.classList.remove('show'); 
+});
+
+document.getElementById('btnStay').addEventListener('click', ()=>{ 
+    confirmModal.classList.remove('show'); 
+});
+
+document.getElementById('btnLeave').addEventListener('click', ()=>{
+    confirmModal.classList.remove('show'); 
+    closeAddPriceModal();
+});
+
+// Event listeners cho popup xác nhận xóa
+document.getElementById('btnCancelDelete').addEventListener('click', ()=>{ 
+    confirmDeleteModal.classList.remove('show'); 
+});
+
+document.getElementById('btnConfirmDelete').addEventListener('click', async ()=>{
+    confirmDeleteModal.classList.remove('show');
+    if (priceToDelete) {
+        try{
+            const r = await fetch(`{{ BACKEND_URL }}/api/prices/${priceToDelete.id}`, { method:'DELETE' });
+            const data = await r.json();
+            if (!data.success) throw new Error(data.detail||'');
+            document.getElementById('priceSuccessMessage').textContent = 'Đã xóa bảng giá thành công!';
+            const m3 = document.getElementById('priceSuccessModal');
+            const ok3 = document.getElementById('btnPriceSuccessOK');
+            const onClose3 = function(){ location.reload(true); };
+            m3.style.display = 'flex';
+            ok3.onclick = function(){ m3.style.display='none'; onClose3(); };
+            m3.onclick = function(e){ if (e.target===m3){ m3.style.display='none'; onClose3(); } };
+        }catch(err){ 
+            if (window.showErrorModal) { showErrorModal('Lỗi xóa: '+(err.message||err)); } else { alert('Lỗi xóa: '+(err.message||err)); }
+        } finally {
+            priceToDelete = null;
+        }
+    }
+});
+
+// Thêm event listeners cho real-time search
+document.getElementById('priceCodeFilter').addEventListener('input', filterPrices);
+document.getElementById('priceTypeFilter').addEventListener('change', filterPrices);
+document.getElementById('priceNameFilter').addEventListener('input', filterPrices);
+
+// Khởi tạo modals
+initializeModals();
+
+// Open edit modal from row click using new API shape
+function onEditPriceClick(id, stt){
+  fetch(`{{ BACKEND_URL }}/api/prices/${id}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const price = data && (data.price || data);
+      if(!price) throw new Error('Không tìm thấy dữ liệu bảng giá');
+      openEditPriceModal(price, stt);
+    })
+    .catch(err=>{
+      console.error('Load price error:', err);
+      if (window.showErrorModal) { showErrorModal('Lỗi tải bảng giá'); } else { alert('Lỗi tải bảng giá'); }
+    });
+}
+
+// Delegate clicks to use onEditPriceClick
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.btn-edit-price');
+  if(btn){
+    const id = parseInt(btn.dataset.id);
+    const stt = btn.dataset.stt;
+    onEditPriceClick(id, stt);
+  }
+});
+
+// Ensure modal close with overlay click
+window.addEventListener('click', function(e){
+  if (e.target === document.getElementById('editPriceModal')) {
+            closeEditPriceModal();
+        }
+  if (e.target === document.getElementById('addPriceModal')) {
+    closeAddPriceModal();
+  }
+});
+
+// Khi submit form thêm/sửa thì bỏ xác nhận thoát cho lần đóng kế tiếp
+document.addEventListener('submit', function(e){
+  if (e && e.target && (e.target.id === 'addPriceForm' || e.target.id === 'editPriceForm')) {
+    __suppressConfirmClose = true;
+  }
+});
+
+// Event listeners cho nút sửa/xóa bảng giá
+document.addEventListener('click', async (e)=>{
+        if (e.target.closest('.btn-edit-price')){
+            const btn = e.target.closest('.btn-edit-price');
+            const id = parseInt(btn.dataset.id);
+            const stt = btn.dataset.stt;
+            
+            console.log('Edit button clicked - ID:', id, 'STT:', stt);
+            
+            try{
+                console.log('Loading price data for ID:', id);
+                const r = await fetch(`{{ BACKEND_URL }}/api/prices/${id}`);
+                
+                if (!r.ok) {
+                    throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+                }
+                
+                const payload = await r.json();
+                const price = payload && (payload.price || payload);
+                if (!price) {
+                    throw new Error('Không tìm thấy dữ liệu bảng giá');
+                }
+                
+                    openEditPriceModal(price, stt);
+            } catch(error){ 
+                console.error('Error loading price data:', error);
+                if (window.showErrorModal) { showErrorModal('Lỗi tải bảng giá: ' + error.message); } else { alert('Lỗi tải bảng giá: ' + error.message); }
+                return; // Không mở modal nếu có lỗi
+            }
+        }
+        
+        if (e.target.closest('.btn-delete-price')){
+            const btn = e.target.closest('.btn-delete-price');
+            const id = parseInt(btn.dataset.id);
+            const row = btn.closest('tr');
+            const cells = row.querySelectorAll('td');
+            
+            // Lấy thông tin bảng giá để hiển thị trong popup
+            const maSp = cells[1].textContent.trim();
+            const tenSp = cells[3].textContent.trim();
+            
+            // Lưu thông tin bảng giá cần xóa
+            priceToDelete = { id, maSp, tenSp };
+            
+            // Hiển thị thông tin bảng giá trong popup
+            document.getElementById('deletePriceInfo').textContent = `${maSp} - ${tenSp}`;
+            
+            // Hiển thị popup xác nhận theo chuẩn global
+            const doDelete = async function(){
+                try{
+                    const r = await fetch(`{{ BACKEND_URL }}/api/prices/${id}`, { method:'DELETE' });
+                    const data = await r.json();
+                    if (data && data.success){
+                        // Xóa dòng trên UI hoặc reload
+                        if (row && row.parentElement) row.parentElement.removeChild(row);
+                        if (window.showSuccessModal) { showSuccessModal('Xóa bảng giá thành công!'); }
+                    } else {
+                        if (window.showErrorModal) { showErrorModal('Lỗi xóa bảng giá'); } else { alert('Lỗi xóa bảng giá'); }
+                    }
+                }catch(err){
+                    if (window.showErrorModal) { showErrorModal('Lỗi xóa bảng giá: ' + (err.message||err)); } else { alert('Lỗi xóa bảng giá: ' + (err.message||err)); }
+                }
+            };
+            if (window.showConfirm) { return showConfirm(`Bạn có chắc chắn muốn xóa bảng giá ${maSp} - ${tenSp}?`, doDelete); }
+            if (window.openPopup) { return openPopup('confirm', `Bạn có chắc chắn muốn xóa bảng giá ${maSp} - ${tenSp}?`, doDelete); }
+            if (confirm(`Bạn có chắc chắn muốn xóa bảng giá ${maSp} - ${tenSp}?`)) doDelete();
+        }
+});
+
+// Áp dụng phân quyền cho trang prices
+if (window.checkUserPermissions) {
+    window.checkUserPermissions();
+}
+
+// ================== Confirm-on-exit logic (unified like products.html) ==================
+function closeAddPriceModal(){
+    const modal = document.getElementById('addPriceModal');
+    if (!modal) return;
+    try {
+        if (__suppressConfirmClose) { __suppressConfirmClose = false; modal.classList.remove('show'); return; }
+        const dirty = typeof hasAddFormData === 'function' ? hasAddFormData() : false;
+        if (dirty) {
+            const doClose = function(){ modal.classList.remove('show'); };
+            if (window.showConfirm) return showConfirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?', doClose);
+            if (window.openPopup) return openPopup('confirm', 'Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?', doClose);
+            if (confirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?')) doClose();
+        } else {
+            modal.classList.remove('show');
+        }
+    } catch(_){ modal.classList.remove('show'); }
+}
+
+function hasEditPriceFormChanged(){
+    const form = document.getElementById('editPriceForm');
+    if (!form) return false;
+    let changed = false;
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(function(el){
+        const orig = el.getAttribute('data-original');
+        if (orig != null) {
+            if ((el.value || '').toString() !== orig.toString()) changed = true;
+        } else {
+            // If no original snapshot, treat non-empty as potential change
+            if ((el.value || '').toString().trim() !== '') changed = true;
+        }
+    });
+    return changed;
+}
+
+function closeEditPriceModal(){
+    const modal = document.getElementById('editPriceModal');
+    if (!modal) return;
+    try {
+        if (__suppressConfirmClose) { __suppressConfirmClose = false; modal.classList.remove('show'); return; }
+        const dirty = hasEditPriceChanged();
+        if (dirty) {
+            const doClose = function(){ modal.classList.remove('show'); };
+            if (window.showConfirm) return showConfirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?', doClose);
+            if (window.openPopup) return openPopup('confirm', 'Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?', doClose);
+            if (confirm('Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?')) doClose();
+        } else {
+            modal.classList.remove('show');
+        }
+    } catch(_){ modal.classList.remove('show'); }
+}
+
+</script>
+{% endblock %}

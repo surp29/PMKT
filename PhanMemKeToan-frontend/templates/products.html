@@ -1,0 +1,1016 @@
+{% extends "base.html" %}
+{% block title %}Quản lý sản phẩm{% endblock %}
+{% block content %}
+
+<h2 class="page-title"><i class="fas fa-boxes"></i> Quản lý sản phẩm</h2>
+
+<div class="filter-bar" style="display:flex;align-items:flex-end;gap:15px;flex-wrap:wrap;">
+	<div class="filter-item">
+		<label>Nhóm sản phẩm</label>
+		<select id="productGroup">
+			<option value="Tất cả">Tất cả</option>
+			{% for group in product_groups %}
+			<option value="{{ group }}">{{ group }}</option>
+			{% endfor %}
+		</select>
+	</div>
+
+	<div class="filter-item">
+		<label>Mã Sản Phẩm</label>
+		<input id="productCode" placeholder="Nhập mã sản phẩm">
+	</div>
+	<div class="filter-item">
+		<label>Tên Sản Phẩm</label>
+		<input id="productName" placeholder="Nhập tên sản phẩm">
+	</div>
+	<div class="filter-item">
+		<label>Trạng thái</label>
+		<select id="productStatus">
+			<option value="" disabled selected hidden>Tất cả</option>
+			<option value="Còn hàng">Còn hàng</option>
+			<option value="Hết hàng">Hết hàng</option>
+		</select>
+	</div>
+	<button id="btnClearFilters" class="clear-btn" style="width:120px;height:38px;padding:8px 16px;border:none;border-radius:4px;background:#6c757d;color:white;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:0;align-self:center;">
+		<i class="fas fa-times"></i> Xóa bộ lọc
+	</button>
+</div>
+
+<div class="toolbar" style="display:flex;justify-content:space-between;align-items:center;background:#007bff;padding:15px 20px;border-radius:8px;margin-top:15px;margin-bottom:20px;">
+	<button type="button" id="openAddProductBtn" style="width:auto;white-space:nowrap;height:38px;padding:8px 16px;border:none;border-radius:4px;background:#28a745;color:white;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+		<i class="fas fa-plus"></i> Thêm sản phẩm
+	</button>
+	<div style="font-weight:bold;font-size:16px;color:#000;">Tổng sản phẩm: <span id="totalCount" class="total-count">{{ total_products }}</span> | Tổng số lượng: <span id="totalQuantity" class="total-quantity">{{ total_quantity }}</span></div>
+</div>
+
+
+
+<!-- Modal thêm sản phẩm -->
+<div id="addProductModal" class="modal">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3>Thêm sản phẩm mới</h3>
+			<span class="close" id="closeAddX">&times;</span>
+		</div>
+		<form id="addProductForm">
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Nhóm SP*:</label>
+						<input type="text" id="productGroupInput" placeholder="Nhập nhóm sản phẩm" required style="flex: 1;" onchange="handleProductGroupChange()">
+					</div>
+					<!-- Input ẩn để nhập tên nhóm mới -->
+					<div id="customProductGroupInput" style="display: none; margin-top: 8px;">
+						<input type="text" id="customProductGroupName" placeholder="Nhập tên nhóm sản phẩm mới" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+					</div>
+				</div>
+
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Mã SP*:</label>
+						<input type="text" id="productCodeInput" placeholder="Nhập mã sản phẩm" required style="flex: 1;">
+					</div>
+				</div>
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Tên SP*:</label>
+						<input type="text" id="productNameInput" placeholder="Nhập tên sản phẩm" required style="flex: 1;">
+					</div>
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Số lượng*:</label>
+						<input type="number" id="productQuantity" placeholder="Nhập số lượng" required min="0" step="1" class="quantity-input" oninput="validatePositiveInteger(this); setStatusByQuantity('productQuantity','productStatusSelect');" style="flex: 1;">
+					</div>
+				</div>
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 90px;">Giá chung*</label>
+						<div style="display:flex;align-items:center;gap:6px;flex:1;">
+							<input type="text" id="productGiaChung" placeholder="Nhập giá chung" required class="money-input-field" oninput="validateAndFormatPrice(this)" style="flex:1;">
+							<span>VNĐ</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 90px;">Giá vốn*</label>
+						<div style="display:flex;align-items:center;gap:6px;flex:1;">
+							<input type="text" id="productPrice" placeholder="Nhập giá vốn" required class="money-input-field" oninput="validateAndFormatPrice(this)" style="flex:1;">
+							<span>VNĐ</span>
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Trạng thái*:</label>
+						<select id="productStatusSelect" required style="flex: 1;">
+							<option value="">Chọn trạng thái</option>
+							<option value="Còn hàng">Còn hàng</option>
+							<option value="Hết hàng">Hết hàng</option>
+						</select>
+					</div>
+				</div>
+			</div>
+			<div class="form-group">
+				<label>Mô tả</label>
+				<textarea id="productDescription" placeholder="Nhập mô tả sản phẩm"></textarea>
+			</div>
+			<div class="form-actions">
+				<button type="submit" class="save-btn">Lưu sản phẩm</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<!-- Modal Xác nhận thoát -->
+<div id="confirmExitModal" class="modal confirm-modal">
+	<div class="modal-content">
+		<div class="modal-header" style="justify-content:center;">
+			<h3 style="margin: 0; text-align: center; flex: 1;">Xác nhận</h3>
+		</div>
+		<div class="modal-body">
+			<p id="confirmMessage">Bạn có muốn thoát không?</p>
+		</div>
+		<div class="modal-footer">
+			<button id="btnLeave" class="btn-danger">Thoát</button>
+			<button id="btnStay" class="btn-secondary">Ở lại</button>
+		</div>
+	</div>
+</div>
+
+<!-- Modal Xác nhận xóa sản phẩm -->
+<div id="confirmDeleteModal" class="modal confirm-modal">
+	<div class="modal-content">
+		<div class="modal-header" style="justify-content:center;">
+			<h3 style="margin: 0; text-align: center;">Xác nhận xóa</h3>
+		</div>
+		<div class="modal-body">
+			<p>Bạn có chắc chắn muốn xóa sản phẩm này?</p>
+			<p style="font-weight: bold; color: #dc3545; margin-top: 10px;" id="deleteProductInfo"></p>
+		</div>
+		<div class="modal-footer">
+			<button id="btnConfirmDelete" class="btn-danger">Xóa</button>
+			<button id="btnCancelDelete" class="btn-secondary">Hủy</button>
+		</div>
+	</div>
+</div>
+
+<!-- Modal Sửa Sản Phẩm -->
+<div id="editProductModal" class="modal">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3 style="margin: 0; text-align: center; flex: 1;">Sửa Sản Phẩm</h3>
+			<span class="close" id="closeEditX">&times;</span>
+		</div>
+		<form id="editProductForm">
+			<input type="hidden" id="editProductId">
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">STT*:</label>
+						<input type="text" id="editProductSTT" readonly style="background:#f8f9fa; flex: 1;">
+					</div>
+				</div>
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Nhóm SP*:</label>
+						<input type="text" id="editProductGroupInput" required style="flex: 1;">
+					</div>
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Mã SP*:</label>
+						<input type="text" id="editProductCodeInput" required style="flex: 1;">
+					</div>
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Tên SP*:</label>
+						<input type="text" id="editProductNameInput" required style="flex: 1;">
+					</div>
+				</div>
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Số lượng*:</label>
+						<input type="number" id="editProductQuantity" required min="0" step="1" class="quantity-input" oninput="validatePositiveInteger(this); setStatusByQuantity('editProductQuantity','editProductStatusSelect');" style="flex: 1;">
+					</div>
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 90px;">Giá chung*</label>
+						<div style="display:flex;align-items:center;gap:6px;flex:1;">
+							<input type="text" id="editProductGiaChung" required class="money-input-field" oninput="validateAndFormatPrice(this)" style="flex:1;">
+							<span>VNĐ</span>
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 90px;">Giá vốn*</label>
+						<div style="display:flex;align-items:center;gap:6px;flex:1;">
+							<input type="text" id="editProductPrice" required class="money-input-field" oninput="validateAndFormatPrice(this)" style="flex:1;">
+							<span>VNĐ</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<div style="display: flex; align-items: center; gap: 8px;">
+						<label style="font-size: 12px; margin: 0; min-width: 60px;">Trạng thái*:</label>
+						<select id="editProductStatusSelect" required style="flex: 1;">
+							<option value="">Chọn trạng thái</option>
+							<option value="Còn hàng">Còn hàng</option>
+							<option value="Hết hàng">Hết hàng</option>
+						</select>
+					</div>
+				</div>
+				<div class="form-group">
+					<label>Mô tả</label>
+					<textarea id="editProductDescription"></textarea>
+				</div>
+			</div>
+			<div class="form-actions">
+				<button type="submit" class="save-btn">Cập nhật sản phẩm</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<table class="product-table" style="width:100%;border-collapse:collapse;">
+	<thead>
+		<tr>
+			<th style="text-align:center;">STT</th>
+			<th style="text-align:center;">Nhóm SP</th>
+			<th style="text-align:center;">Mã SP</th>
+			<th style="text-align:center;">Tên SP</th>
+			<th style="text-align:center;">Số lượng</th>
+			<th style="text-align:center;">Giá chung</th>
+			<th style="text-align:center;">Giá vốn</th>
+			<th style="text-align:center;">Trạng thái</th>
+			<th style="text-align:center;">Mô tả</th>
+			<th style="text-align:center;">Hành động</th>
+		</tr>
+	</thead>
+	<tbody id="productTbody">
+		{% if products %}
+		{% for product in products %}
+		<tr data-product-id="{{ product.id }}">
+			<td style="text-align:center;">{{ loop.index }}</td>
+			<td style="text-align:center;">{{ product.nhom_sp if product.nhom_sp else 'Máy tính' }}</td>
+
+			<td style="text-align:center;">{{ product.ma_sp }}</td>
+			<td style="text-align:center;">{{ product.ten_sp }}</td>
+			<td style="text-align:center;">{{ product.so_luong }}</td>
+			<td style="text-align:center;">{{ "{:,.0f}".format(product.gia_chung) if product.gia_chung and product.gia_chung > 0 else '0' }} VNĐ</td>
+			<td style="text-align:center;">{{ "{:,.0f}".format(product.gia_ban) if product.gia_ban is not none else '' }} VNĐ</td>
+			<td style="text-align:center;">{{ 'Còn hàng' if product.so_luong and product.so_luong > 0 else 'Hết hàng' }}</td>
+			<td style="text-align:center;">{{ product.mo_ta if product.mo_ta else '' }}</td>
+			<td style="text-align:center;">
+				<div style="display:flex;gap:5px;justify-content:center;">
+					<button class="btn-edit" data-id="{{ product.id }}" data-stt="{{ product.id }}" style="background:#3498db;color:white;padding:4px 8px;border:none;border-radius:3px;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+						<i class="fas fa-edit" style="font-size:10px;"></i> <span>Sửa</span>
+					</button>
+					<button class="btn-delete" data-id="{{ product.id }}" style="background:#e74c3c;color:white;padding:4px 8px;border:none;border-radius:3px;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+						<i class="fas fa-trash" style="font-size:10px;"></i> <span>Xóa</span>
+					</button>
+				</div>
+			</td>
+		</tr>
+		{% endfor %}
+		{% else %}
+		<tr><td colspan="11" style="text-align:center;color:red;font-weight:bold;">Không có dữ liệu sản phẩm nào! Vui lòng thêm sản phẩm.</td></tr>
+		{% endif %}
+	</tbody>
+</table>
+
+<div class="total-footer" style="margin-top:10px; font-weight:bold; color:#000;">
+	Tổng sản phẩm: <span id="totalCountFooter">{{ total_products }}</span> | Tổng số lượng: <span id="totalQuantityFooter">{{ total_quantity }}</span>
+</div>
+
+<script>
+// ====== LƯU Ý QUAN TRỌNG: TÁCH BIỆT SẢN PHẨM VÀ BẢNG GIÁ ======
+// 
+// 1. Khi thêm sản phẩm mới:
+//    - Chỉ tạo sản phẩm, KHÔNG tự động tạo bảng giá mới
+//    - Trường gia_chung chỉ để hiển thị, không tạo bảng giá
+//    - Hoàn toàn tách biệt với bảng prices
+//
+// 2. Khi cập nhật sản phẩm:
+//    - Chỉ cập nhật thông tin sản phẩm, không thay đổi bảng giá
+//    - Trường gia_chung chỉ để tham khảo
+//
+// 3. Bảng giá phải được tạo riêng trong trang "Bảng giá"
+//    - Không có liên kết gì với sản phẩm
+//    - Hoàn toàn độc lập
+//
+// ====== KẾT THÚC LƯU Ý ======
+
+const BACKEND = `{{ BACKEND_URL }}`;
+
+function numberOnly(input){ input.value = input.value.replace(/[^0-9,\.]/g,''); }
+
+function recalcTotal(){
+	const tbody = document.getElementById('productTbody');
+	const rows = Array.from(tbody.querySelectorAll('tr'));
+	let visible = 0;
+	let totalQty = 0;
+	rows.forEach(r=>{ 
+		// Chỉ xử lý những dòng thực sự có dữ liệu sản phẩm
+		const cells = r.querySelectorAll('td');
+		if (cells.length > 0 && r.style.display !== 'none' && cells[2] && cells[2].textContent.trim()) {
+			visible++;
+			// Cập nhật STT liên tục theo thứ tự hiển thị
+			const sttCell = cells[0];
+			if (sttCell) sttCell.textContent = visible.toString();
+			// Tính tổng số lượng từ cột số lượng (cột thứ 5)
+			const qtyCell = cells[4];
+			if (qtyCell) {
+				const qty = parseInt(qtyCell.textContent.trim()) || 0;
+				totalQty += qty;
+			}
+		}
+	});
+	document.getElementById('totalCount').textContent = visible.toString();
+	document.getElementById('totalQuantity').textContent = totalQty.toString();
+	const fc = document.getElementById('totalCountFooter');
+	const fq = document.getElementById('totalQuantityFooter');
+	if (fc) fc.textContent = visible.toString();
+	if (fq) fq.textContent = totalQty.toString();
+}
+
+// Hàm chuẩn hóa văn bản tiếng Việt để tìm kiếm
+function normalizeVietnameseText(text) {
+    if (!text) return "";
+    
+    // Mapping dấu tiếng Việt sang không dấu
+    const vietnameseMap = {
+        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+        'đ': 'd',
+        'À': 'A', 'Á': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
+        'Ă': 'A', 'Ằ': 'A', 'Ắ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
+        'Â': 'A', 'Ầ': 'A', 'Ấ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
+        'È': 'E', 'É': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
+        'Ê': 'E', 'Ề': 'E', 'Ế': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
+        'Ì': 'I', 'Í': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
+        'Ò': 'O', 'Ó': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
+        'Ô': 'O', 'Ồ': 'O', 'Ố': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
+        'Ơ': 'O', 'Ờ': 'O', 'Ớ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
+        'Ù': 'U', 'Ú': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
+        'Ư': 'U', 'Ừ': 'U', 'Ứ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
+        'Ỳ': 'Y', 'Ý': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
+        'Đ': 'D'
+    };
+    
+    // Thay thế dấu tiếng Việt
+    let normalized = text;
+    for (const [accented, plain] of Object.entries(vietnameseMap)) {
+        normalized = normalized.replace(new RegExp(accented, 'g'), plain);
+    }
+    
+    // Chuyển về chữ thường và loại bỏ khoảng trắng thừa
+    normalized = normalized.toLowerCase().trim();
+    
+    return normalized;
+}
+
+// Hàm tìm kiếm linh hoạt - hỗ trợ tìm kiếm dính liền và tách rời
+function flexibleSearch(searchText, targetText) {
+    if (!searchText || !targetText) return false;
+    
+    // Chuẩn hóa cả hai văn bản
+    const normalizedSearch = normalizeVietnameseText(searchText);
+    const normalizedTarget = normalizeVietnameseText(targetText);
+    
+    // 1. Tìm kiếm trực tiếp (bao gồm cả dính liền)
+    if (normalizedTarget.includes(normalizedSearch)) {
+        return true;
+    }
+    
+    // 2. Tìm kiếm khi tách từ (nếu searchText có thể tách thành nhiều từ)
+    const searchWords = normalizedSearch.split(/\s+/).filter(word => word.length > 0);
+    if (searchWords.length > 1) {
+        // Nếu có nhiều từ, kiểm tra xem tất cả từ có xuất hiện trong target không
+        return searchWords.every(word => normalizedTarget.includes(word));
+    }
+    
+    // 3. Tìm kiếm khi ghép từ (nếu searchText có thể là từ ghép)
+    // Ví dụ: "sacasus" có thể tìm "sac asus", "sạc asus", "sacasus"
+    if (normalizedSearch.length > 3) {
+        // Thử tách thành các từ có thể có
+        const possibleCombinations = generatePossibleCombinations(normalizedSearch);
+        for (const combination of possibleCombinations) {
+            if (normalizedTarget.includes(combination)) {
+                return true;
+            }
+        }
+    }
+    
+    // 4. Tìm kiếm fuzzy - kiểm tra độ tương tự
+    if (calculateSimilarity(normalizedSearch, normalizedTarget) > 0.7) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Hàm tạo các tổ hợp từ có thể có từ một chuỗi dính liền
+function generatePossibleCombinations(text) {
+    const combinations = [];
+    
+    // Thêm chính nó
+    combinations.push(text);
+    
+    // Thêm các biến thể có thể có
+    if (text.length > 4) {
+        // Thử chèn khoảng trắng ở các vị trí khác nhau
+        for (let i = 2; i < text.length - 1; i++) {
+            const part1 = text.substring(0, i);
+            const part2 = text.substring(i);
+            combinations.push(part1 + ' ' + part2);
+        }
+    }
+    
+    // Thêm các biến thể thay thế ký tự tương tự
+    const similarChars = {
+        'd': ['d', 'đ'],
+        'đ': ['d', 'đ'],
+        'i': ['i', 'y'],
+        'y': ['i', 'y'],
+        'u': ['u', 'ư'],
+        'ư': ['u', 'ư'],
+        'o': ['o', 'ô', 'ơ'],
+        'ô': ['o', 'ô', 'ơ'],
+        'ơ': ['o', 'ô', 'ơ'],
+        'a': ['a', 'ă', 'â'],
+        'ă': ['a', 'ă', 'â'],
+        'â': ['a', 'ă', 'â'],
+        'e': ['e', 'ê'],
+        'ê': ['e', 'ê']
+    };
+    
+    // Tạo biến thể với các ký tự tương tự
+    for (const [char, alternatives] of Object.entries(similarChars)) {
+        if (text.includes(char)) {
+            for (const alt of alternatives) {
+                if (alt !== char) {
+                    combinations.push(text.replace(new RegExp(char, 'g'), alt));
+                }
+            }
+        }
+    }
+    
+    return combinations;
+}
+
+// Hàm tính độ tương tự giữa hai chuỗi (Levenshtein distance)
+function calculateSimilarity(str1, str2) {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+            if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    
+    const maxLength = Math.max(str1.length, str2.length);
+    const similarity = 1 - (matrix[str2.length][str1.length] / maxLength);
+    return similarity;
+}
+
+// Filters
+function searchProducts(){
+	const groupFilter = document.getElementById('productGroup').value;
+	const codeFilter = normalizeVietnameseText(document.getElementById('productCode').value);
+	const nameFilter = normalizeVietnameseText(document.getElementById('productName').value);
+	const statusFilter = document.getElementById('productStatus').value || '';
+	const rows = document.querySelectorAll('.product-table tbody tr');
+	let visibleCount = 0;
+	let totalQty = 0;
+	rows.forEach((row)=>{
+		const cells = row.querySelectorAll('td');
+		if (cells.length===0) return;
+		const group = cells[1].textContent.trim(); // Cột "Nhóm SP"
+		const code = normalizeVietnameseText(cells[2].textContent.trim()); // Cột "Mã SP"
+		const name = normalizeVietnameseText(cells[3].textContent.trim()); // Cột "Tên SP"
+		const status = cells[7].textContent.trim(); // Cột "Trạng thái"
+		let show = true;
+		
+		// Filter theo nhóm sản phẩm (không cần chuẩn hóa vì là dropdown)
+		if (groupFilter !== 'Tất cả' && group !== groupFilter) {
+			show = false;
+		}
+		
+		// Filter theo mã sản phẩm - sử dụng tìm kiếm linh hoạt
+		if (codeFilter && !flexibleSearch(codeFilter, code)) {
+			show = false;
+		}
+		
+		// Filter theo tên sản phẩm - sử dụng tìm kiếm linh hoạt
+		if (nameFilter && !flexibleSearch(nameFilter, name)) {
+			show = false;
+		}
+		
+		// Filter theo trạng thái (rỗng = không lọc)
+		if (statusFilter && status !== statusFilter) {
+			show = false;
+		}
+		
+		row.style.display = show ? '' : 'none';
+		if (show) { 
+			visibleCount++; 
+			// Cập nhật lại STT cho dòng hiển thị (chỉ khi có dữ liệu thực sự)
+			if (cells[2] && cells[2].textContent.trim()) {
+				cells[0].textContent = visibleCount.toString();
+			}
+			// Tính tổng số lượng từ cột số lượng (cột thứ 5)
+			const qtyCell = cells[4]; // Cột số lượng
+			if (qtyCell) {
+				const qty = parseInt(qtyCell.textContent.trim()) || 0;
+				totalQty += qty;
+			}
+		}
+	});
+	document.getElementById('totalCount').textContent = visibleCount.toString();
+	document.getElementById('totalQuantity').textContent = totalQty.toString();
+	const fc = document.getElementById('totalCountFooter');
+	const fq = document.getElementById('totalQuantityFooter');
+	if (fc) fc.textContent = visibleCount.toString();
+	if (fq) fq.textContent = totalQty.toString();
+}
+
+document.getElementById('btnClearFilters').addEventListener('click', ()=>{
+	document.getElementById('productGroup').value='Tất cả';
+	const statusSel = document.getElementById('productStatus');
+	if (statusSel) statusSel.selectedIndex = 0; // về placeholder "Tất cả"
+	document.getElementById('productCode').value='';
+	document.getElementById('productName').value='';
+	searchProducts();
+	// Reset về tổng số sản phẩm và số lượng ban đầu
+	document.getElementById('totalCount').textContent = '{{ total_products }}';
+	document.getElementById('totalQuantity').textContent = '{{ total_quantity }}';
+});
+
+// Thêm debounce để tối ưu hiệu suất tìm kiếm
+let searchTimeout;
+function debouncedSearch() {
+	clearTimeout(searchTimeout);
+	searchTimeout = setTimeout(searchProducts, 300);
+}
+
+// Biến lưu thông tin sản phẩm cần xóa
+let productToDelete = null;
+
+// Biến lưu trạng thái form
+let originalFormData = {};
+let isFormChanged = false;
+
+document.getElementById('productCode').addEventListener('input', debouncedSearch);
+
+document.getElementById('productName').addEventListener('input', debouncedSearch);
+
+document.getElementById('productGroup').addEventListener('change', searchProducts);
+
+document.getElementById('productStatus').addEventListener('change', searchProducts);
+
+// Modal open/close
+const addModal = document.getElementById('addProductModal');
+const editModal = document.getElementById('editProductModal');
+const confirmModal = document.getElementById('confirmExitModal');
+const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+
+// Helper: tự đặt trạng thái theo số lượng (>0: Còn hàng, =0: Hết hàng)
+function setStatusByQuantity(qtyInputId, statusSelectId){
+    const qtyEl = document.getElementById(qtyInputId);
+    const statusEl = document.getElementById(statusSelectId);
+    if (!qtyEl || !statusEl) return;
+    const qty = parseInt((qtyEl.value||'').toString().replace(/[^0-9]/g,'')) || 0;
+    statusEl.value = qty > 0 ? 'Còn hàng' : 'Hết hàng';
+}
+
+function openAdd(){
+	// Reset form về trống
+	document.getElementById('addProductForm').reset();
+	originalFormData = {};
+	isFormChanged = false;
+	
+	// Reset input ẩn cho nhóm sản phẩm mới
+	document.getElementById('customProductGroupInput').style.display = 'none';
+	document.getElementById('customProductGroupName').value = '';
+	document.getElementById('customProductGroupName').required = false;
+	
+	addModal.style.display='flex';
+}
+
+// Hàm kiểm tra form thêm có dữ liệu hay không
+function hasAddFormData() {
+	const form = document.getElementById('addProductForm');
+	const inputs = form.querySelectorAll('input, select, textarea');
+	for (let input of inputs) {
+		if (input.value && input.value.trim() !== '') {
+			return true;
+		}
+	}
+	return false;
+}
+
+// Hàm kiểm tra form sửa có thay đổi hay không
+function hasEditFormChanged() {
+	const form = document.getElementById('editProductForm');
+	const inputs = form.querySelectorAll('input, select, textarea');
+	// Hàm chuẩn hóa: cắt trắng và bỏ dấu phẩy ở các ô số
+	const normalize = (id, val)=>{
+		const v = (val||'').toString().trim();
+		if (id==='editProductGiaChung' || id==='editProductPrice' || id==='editProductQuantity') {
+			return v.replace(/[,\s]/g,'');
+		}
+		return v;
+	};
+	for (let input of inputs) {
+		// Chỉ so sánh các trường đã có trong originalFormData
+		if (!Object.prototype.hasOwnProperty.call(originalFormData, input.id)) continue;
+		const currentValue = normalize(input.id, input.value);
+		const originalValue = normalize(input.id, originalFormData[input.id]);
+		if (currentValue !== (originalValue||'')) {
+			return true;
+		}
+	}
+	return false;
+}
+function closeAdd(){ addModal.style.display='none'; document.getElementById('addProductForm').reset(); }
+
+function openEditByData(p, stt){
+	document.getElementById('editProductId').value = p.id;
+	document.getElementById('editProductSTT').value = p.id || '';
+	document.getElementById('editProductGroupInput').value = p.nhom_sp || '';
+	document.getElementById('editProductCodeInput').value = p.ma_sp || '';
+	document.getElementById('editProductNameInput').value = p.ten_sp || '';
+	document.getElementById('editProductQuantity').value = p.so_luong || 0;
+	// Format giá trị với dấu phẩy nếu có
+	document.getElementById('editProductGiaChung').value = p.gia_chung ? p.gia_chung.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+	document.getElementById('editProductPrice').value = p.gia_ban ? p.gia_ban.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+	document.getElementById('editProductStatusSelect').value = p.trang_thai || '';
+	document.getElementById('editProductDescription').value = p.mo_ta || '';
+	
+	// Lưu dữ liệu gốc để so sánh
+	originalFormData = {
+		'editProductGroupInput': (p.nhom_sp || '').toString().trim(),
+		'editProductCodeInput': (p.ma_sp || '').toString().trim(),
+		'editProductNameInput': (p.ten_sp || '').toString().trim(),
+		'editProductQuantity': String(p.so_luong || 0),
+		// Lưu dạng số (không dấu phẩy) để so sánh ổn định
+		'editProductGiaChung': p.gia_chung ? String(p.gia_chung) : '',
+		'editProductPrice': p.gia_ban ? String(p.gia_ban) : '',
+		'editProductStatusSelect': (p.trang_thai || '').toString().trim(),
+		'editProductDescription': (p.mo_ta || '').toString().trim()
+	};
+	
+	isFormChanged = false;
+	editModal.style.display='flex';
+}
+function closeEdit(){ editModal.style.display='none'; document.getElementById('editProductForm').reset(); }
+
+// Attach button events
+ document.getElementById('openAddProductBtn').addEventListener('click', openAdd);
+ document.getElementById('closeAddX').addEventListener('click', ()=>{
+	if (hasAddFormData()) {
+		document.getElementById('confirmMessage').textContent = 'Bạn có muốn hủy thêm sản phẩm?';
+		confirmModal.style.display='flex';
+	} else {
+		closeAdd();
+	}
+ });
+ document.getElementById('closeEditX').addEventListener('click', ()=>{
+	if (hasEditFormChanged()) {
+		document.getElementById('confirmMessage').textContent = 'Bạn có muốn hủy chỉnh sửa?';
+		confirmModal.style.display='flex';
+	} else {
+		closeEdit();
+	}
+ });
+ (function(){ const x = document.getElementById('closeConfirmX'); if (x) x.addEventListener('click', ()=>{ confirmModal.style.display='none'; }); })();
+ document.getElementById('btnStay').addEventListener('click', ()=>{ confirmModal.style.display='none'; });
+ document.getElementById('btnLeave').addEventListener('click', ()=>{
+	confirmModal.style.display='none'; 
+	// Kiểm tra modal nào đang mở để đóng đúng
+	if (addModal.style.display === 'flex') {
+		closeAdd();
+	} else if (editModal.style.display === 'flex') {
+		closeEdit();
+	}
+ });
+ 
+ // Event listeners cho popup xác nhận xóa
+ document.getElementById('btnCancelDelete').addEventListener('click', ()=>{ confirmDeleteModal.style.display='none'; });
+ document.getElementById('btnConfirmDelete').addEventListener('click', async ()=>{
+	confirmDeleteModal.style.display='none';
+	if (productToDelete) {
+		try{
+			const r = await fetch(`${BACKEND}/api/products/${productToDelete.id}`, { method:'DELETE' });
+			const data = await r.json();
+			if (!data.success) throw new Error(data.detail||'');
+			// Xóa dòng khỏi bảng mà không reload
+			const row = document.querySelector(`.product-table tbody tr[data-product-id="${productToDelete.id}"]`);
+			if (row) row.remove();
+			recalcTotal();
+		}catch(err){ 
+			if (window.showErrorModal) { showErrorModal('Lỗi xóa: '+(err.message||err)); } else { alert('Lỗi xóa: '+(err.message||err)); }
+		} finally {
+			productToDelete = null;
+		}
+	}
+ });
+ 
+ window.addEventListener('click', (e)=>{ 
+	if(e.target===addModal) {
+		if (hasAddFormData()) {
+			document.getElementById('confirmMessage').textContent = 'Bạn có muốn hủy thêm sản phẩm?';
+			confirmModal.style.display='flex';
+		} else {
+			closeAdd();
+		}
+	}
+	if(e.target===editModal) {
+		if (hasEditFormChanged()) {
+			document.getElementById('confirmMessage').textContent = 'Bạn có muốn hủy chỉnh sửa?';
+			confirmModal.style.display='flex';
+		} else {
+			closeEdit();
+		}
+	}
+	if(e.target===confirmModal) confirmModal.style.display='none';
+	if(e.target===confirmDeleteModal) confirmDeleteModal.style.display='none';
+ });
+
+// Delegated actions for edit/delete buttons
+ document.addEventListener('click', async (e)=>{
+	if (e.target.closest('.btn-edit')){
+		const btn = e.target.closest('.btn-edit');
+		const id = parseInt(btn.dataset.id);
+		const stt = btn.dataset.stt;
+		try{
+			const r = await fetch(`${BACKEND}/api/products/`);
+			const payload = await r.json();
+			const arr = Array.isArray(payload) ? payload : (payload.products || payload.data || []);
+			const p = Array.isArray(arr) ? arr.find(x=>x.id===id) : null;
+			if (p) openEditByData(p, stt);
+			else { if (window.showErrorModal) { showErrorModal('Lỗi tải sản phẩm'); } else { alert('Lỗi tải sản phẩm'); } }
+		}
+		catch(_){ if (window.showErrorModal) { showErrorModal('Lỗi tải sản phẩm'); } else { alert('Lỗi tải sản phẩm'); } }
+	}
+	if (e.target.closest('.btn-delete')){
+		const btn = e.target.closest('.btn-delete');
+		const id = parseInt(btn.dataset.id);
+		const row = btn.closest('tr');
+		const cells = row.querySelectorAll('td');
+		
+		// Lấy thông tin sản phẩm để hiển thị trong popup
+		const maSp = cells[2].textContent.trim();
+		const tenSp = cells[3].textContent.trim();
+		const nhomSp = cells[1].textContent.trim();
+		
+		// Lưu thông tin sản phẩm cần xóa
+		productToDelete = { id, maSp, tenSp, nhomSp };
+		
+		// Hiển thị thông tin sản phẩm trong popup
+		document.getElementById('deleteProductInfo').textContent = `${maSp} - ${tenSp} (${nhomSp})`;
+		
+		// Hiển thị popup xác nhận
+		confirmDeleteModal.style.display = 'flex';
+	}
+ });
+
+// Submit thêm sản phẩm
+ document.getElementById('addProductForm').addEventListener('submit', async (e)=>{
+	e.preventDefault();
+	
+	let nhomSp = document.getElementById('productGroupInput').value.trim();
+	
+	// Nếu nhập "khác", sử dụng tên nhóm mới
+	if (nhomSp.toLowerCase() === 'khác') {
+		const customGroupName = document.getElementById('customProductGroupName').value.trim();
+		if (!customGroupName) {
+			if (window.showErrorModal) { showErrorModal('Vui lòng nhập tên nhóm sản phẩm mới!'); } else { alert('Vui lòng nhập tên nhóm sản phẩm mới!'); }
+			document.getElementById('customProductGroupName').focus();
+			return;
+		}
+		
+		try {
+			// Tạo nhóm sản phẩm mới
+			nhomSp = await createNewProductGroup(customGroupName);
+		} catch (error) {
+			if (window.showErrorModal) { showErrorModal('Lỗi khi tạo nhóm sản phẩm mới: ' + error.message); } else { alert('Lỗi khi tạo nhóm sản phẩm mới: ' + error.message); }
+			return;
+		}
+	}
+	
+	const payload = {
+		nhom_sp: nhomSp,
+		ma_sp: document.getElementById('productCodeInput').value,
+		ten_sp: document.getElementById('productNameInput').value,
+		so_luong: parseInt(document.getElementById('productQuantity').value||'0',10),
+		gia_chung: parseFloat((document.getElementById('productGiaChung').value||'0').toString().replace(/,/g,'')),
+		gia_ban: parseFloat((document.getElementById('productPrice').value||'0').toString().replace(/,/g,'')),
+		trang_thai: document.getElementById('productStatusSelect').value,
+		mo_ta: document.getElementById('productDescription').value,
+	};
+	if (!payload.ma_sp || !payload.ten_sp || !payload.trang_thai){ if (window.showErrorModal) { showErrorModal('Vui lòng nhập đủ thông tin'); } else { alert('Vui lòng nhập đủ thông tin'); } return; }
+	try{
+		const r = await fetch(`${BACKEND}/api/products/`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+		const data = await r.json();
+		if (!data.success && !data.id) throw new Error(data.detail||'');
+		closeAdd();
+		// Thêm dòng mới vào bảng mà không reload
+		const tbody = document.getElementById('productTbody');
+		const newRow = document.createElement('tr');
+		newRow.setAttribute('data-product-id', data.id || payload.ma_sp);
+		// Tính STT mới cho sản phẩm
+		const existingRows = tbody.querySelectorAll('tr');
+		const newSTT = existingRows.length + 1;
+		
+		newRow.innerHTML = `
+			<td style="text-align:center;">${newSTT}</td>
+			<td style="text-align:center;">${payload.nhom_sp || ''}</td>
+			<td style="text-align:center;">${payload.ma_sp}</td>
+			<td style="text-align:center;">${payload.ten_sp}</td>
+			<td style="text-align:center;">${payload.so_luong || 0}</td>
+			<td style="text-align:center;">${(payload.gia_chung||0).toLocaleString('vi-VN')} VNĐ</td>
+			<td style="text-align:center;">${(payload.gia_ban||0).toLocaleString('vi-VN')} VNĐ</td>
+			<td style="text-align:center;">${payload.trang_thai || ''}</td>
+			<td style="text-align:center;">${payload.mo_ta || ''}</td>
+			<td style="text-align:center;">
+				<div style="display:flex;gap:5px;justify-content:center;">
+					<button class="btn-edit" data-id="${data.id}" data-stt="${data.id}" style="background:#3498db;color:white;padding:4px 8px;border:none;border-radius:3px;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+						<i class="fas fa-edit" style="font-size:10px;"></i> <span>Sửa</span>
+					</button>
+					<button class="btn-delete" data-id="${data.id}" style="background:#e74c3c;color:white;padding:4px 8px;border:none;border-radius:3px;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+						<i class="fas fa-trash" style="font-size:10px;"></i> <span>Xóa</span>
+					</button>
+				</div>
+			</td>`;
+		tbody.appendChild(newRow);
+		recalcTotal();
+		if (window.showSuccessModal) { window.showSuccessModal('Thêm sản phẩm thành công!'); }
+	}catch(err){ if (window.showErrorModal) { showErrorModal('Lỗi lưu: '+(err.message||err)); } else { alert('Lỗi lưu: '+(err.message||err)); } }
+ });
+
+// Submit sửa sản phẩm
+ document.getElementById('editProductForm').addEventListener('submit', async (e)=>{
+	e.preventDefault();
+	const id = document.getElementById('editProductId').value;
+	const payload = {
+		nhom_sp: document.getElementById('editProductGroupInput').value,
+		ma_sp: document.getElementById('editProductCodeInput').value,
+		ten_sp: document.getElementById('editProductNameInput').value,
+		so_luong: parseInt(document.getElementById('editProductQuantity').value||'0',10),
+		gia_chung: parseFloat((document.getElementById('editProductGiaChung').value||'0').toString().replace(/,/g,'')),
+		gia_ban: parseFloat((document.getElementById('editProductPrice').value||'0').toString().replace(/,/g,'')),
+		trang_thai: document.getElementById('editProductStatusSelect').value,
+		mo_ta: document.getElementById('editProductDescription').value,
+	};
+	try{
+		const r = await fetch(`${BACKEND}/api/products/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+		const data = await r.json();
+		if (!data.success) throw new Error(data.detail||'');
+		closeEdit();
+		if (window.showSuccessModal) { window.showSuccessModal('Cập nhật sản phẩm thành công!', function(){ location.reload(true); }); }
+		else { location.reload(true); }
+	}catch(err){ if (window.showErrorModal) { showErrorModal('Lỗi cập nhật: '+(err.message||err)); } else { alert('Lỗi cập nhật: '+(err.message||err)); } }
+ });
+
+// Validation functions
+function validatePositiveInteger(input) {
+	// Chỉ cho phép số nguyên dương
+	let value = input.value;
+	value = value.replace(/[^\d]/g, ''); // Chỉ giữ lại số
+	if (value === '') {
+		input.value = '';
+		return;
+	}
+	
+	let num = parseInt(value);
+	if (num < 0) {
+		num = 0;
+	}
+	input.value = num;
+}
+
+function validateAndFormatPrice(input) {
+	// Chỉ cho phép số nguyên dương
+	let value = input.value;
+	value = value.replace(/[^\d]/g, ''); // Chỉ giữ lại số
+	
+	if (value === '') {
+		input.value = '';
+		return;
+	}
+	
+	let num = parseInt(value);
+	if (num < 0) {
+		num = 0;
+	}
+	
+	// Tự động thêm dấu phẩy từ 1000 trở lên
+	if (num >= 1000) {
+		input.value = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+	} else {
+		input.value = num;
+	}
+}
+
+// Hàm xử lý thay đổi nhóm sản phẩm
+function handleProductGroupChange() {
+	const productGroupInput = document.getElementById('productGroupInput');
+	const customProductGroupInput = document.getElementById('customProductGroupInput');
+	const customProductGroupName = document.getElementById('customProductGroupName');
+
+	if (productGroupInput.value.toLowerCase() === 'khác') {
+		customProductGroupInput.style.display = 'block';
+		customProductGroupName.focus();
+		customProductGroupName.required = true;
+	} else {
+		customProductGroupInput.style.display = 'none';
+		customProductGroupName.value = '';
+		customProductGroupName.required = false;
+	}
+}
+
+// Hàm tạo nhóm sản phẩm mới
+async function createNewProductGroup(groupName) {
+	try {
+		const response = await fetch(`${BACKEND}/api/product-groups/`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				ten_nhom: groupName,
+				mo_ta: `Nhóm sản phẩm: ${groupName}`
+			})
+		});
+		
+		const data = await response.json();
+		if (data.success) {
+			console.log('Đã tạo nhóm sản phẩm mới:', data.ten_nhom);
+			return data.ten_nhom;
+		} else {
+			throw new Error(data.detail || 'Lỗi tạo nhóm sản phẩm');
+		}
+	} catch (error) {
+		console.error('Lỗi khi tạo nhóm sản phẩm:', error);
+		throw error;
+	}
+}
+
+// Khởi tạo trang
+document.addEventListener('DOMContentLoaded', function() {
+	recalcTotal();
+	
+	// Áp dụng phân quyền cho trang products
+	if (window.checkUserPermissions) {
+		window.checkUserPermissions();
+	}
+});
+</script>
+
+{% endblock %}

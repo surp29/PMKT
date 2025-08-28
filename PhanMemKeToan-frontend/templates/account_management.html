@@ -1,0 +1,1674 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý tài khoản{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="page-title">Quản lý tài khoản</h2>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="customers">Khách hàng</button>
+        <button class="tab-btn" data-tab="employees">Nhân viên</button>
+    </div>
+
+    <!-- Customer Tab Content -->
+    <div id="customers" class="tab-content active">
+        <!-- Search Form -->
+        <div class="filter-bar">
+            <div class="filter-item">
+                <label>Tên khách hàng</label>
+                <input type="text" id="customer-name" placeholder="Nhập tên khách hàng">
+            </div>
+            <div class="filter-item">
+                <label>Email</label>
+                <input type="email" id="customer-email" placeholder="Nhập email">
+            </div>
+            
+            <button class="search-btn btn-secondary" onclick="clearCustomerFilters()"><i class="fas fa-sync"></i> Xóa bộ lọc</button>
+        </div>
+
+        <!-- Customer Table -->
+        <div class="table-container">
+            <div class="toolbar">
+                <button class="add-btn" onclick="openAddCustomerModal()"><i class="fas fa-plus"></i> Thêm khách hàng</button>
+                <span id="customer-total-count" style="margin-left:auto; color: #000; font-weight: 500;">Tổng: 0</span>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Tên khách hàng</th>
+                        <th>Tk nợ</th>
+                        <th>Tk có</th>
+                        <th>Email</th>
+                        <th>Số điện thoại</th>
+                        <th>Địa chỉ</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="customer-table-body">
+                    <tr><td colspan="9" class="searching">Đang tải dữ liệu khách hàng...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Employee Tab Content -->
+    <div id="employees" class="tab-content">
+        <!-- Search Form -->
+        <div class="filter-bar">
+            <div class="filter-item">
+                <label>Mã nhân viên</label>
+                <input type="text" id="employee-code" placeholder="Nhập mã NV">
+            </div>
+            <div class="filter-item">
+                <label>Tên nhân viên</label>
+                <input type="text" id="employee-name" placeholder="Nhập tên nhân viên">
+            </div>
+            
+            <button class="search-btn btn-secondary" onclick="clearEmployeeFilters()"><i class="fas fa-sync"></i> Xóa bộ lọc</button>
+        </div>
+
+        <!-- Employee Table -->
+        <div class="table-container">
+            <div class="toolbar">
+                <button class="add-btn" onclick="openAddEmployeeModal()" id="add-employee-btn"><i class="fas fa-plus"></i> Thêm nhân viên</button>
+                <span id="employee-total-count" style="margin-left:auto; color: #000; font-weight: 500;">Tổng: 0</span>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Mã NV</th>
+                        <th>Tên nhân viên</th>
+                        <th>Email</th>
+                        <th>Số điện thoại</th>
+                        <th>Chức vụ</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="employee-table-body">
+                    <tr><td colspan="8" class="searching">Đang tải dữ liệu nhân viên...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal thêm khách hàng -->
+<div id="addCustomerModal" class="modal">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3 style="color: white; text-align: center; width: 100%; margin: 0;">Thêm khách hàng mới</h3>
+			<span class="close" onclick="attemptCloseAddCustomerModal()">&times;</span>
+		</div>
+		<form id="addCustomerForm">
+			<div class="form-row">
+				<div class="form-group">
+					<label>Tên khách hàng*</label>
+					<input type="text" id="customerName" placeholder="Nhập tên khách hàng" required>
+				</div>
+				<div class="form-group">
+					<label>Email</label>
+					<input type="email" id="customerEmail" placeholder="Nhập email">
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<label>Số điện thoại</label>
+					<input type="tel" id="customerPhone" placeholder="Nhập số điện thoại" inputmode="numeric" maxlength="10" pattern="^0\d{9}$" required>
+				</div>
+				<div class="form-group">
+					<label>Địa chỉ</label>
+					<input type="text" id="customerAddress" placeholder="Nhập địa chỉ">
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<label>Tk nợ</label>
+					<input type="text" id="customerTkNo" placeholder="Nhập TK nợ">
+				</div>
+				<div class="form-group">
+					<label>Tk có</label>
+					<input type="text" id="customerTkCo" placeholder="Nhập TK có">
+				</div>
+			</div>
+
+			<div class="form-actions">
+				<button type="submit" class="save-btn">Lưu khách hàng</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<!-- Modal thêm nhân viên -->
+<div id="addEmployeeModal" class="modal">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3 style="color: white; text-align: center; width: 100%; margin: 0;">Thêm nhân viên mới</h3>
+			<span class="close" onclick="attemptCloseAddEmployeeModal()">&times;</span>
+		</div>
+		<form id="addEmployeeForm">
+			<div class="form-row">
+				<div class="form-group">
+					<label>Tên đăng nhập*</label>
+					<input type="text" id="employeeUsername" placeholder="Nhập tên đăng nhập" required>
+				</div>
+				<div class="form-group">
+					<label>Mật khẩu*</label>
+					<input type="password" id="employeePassword" placeholder="Nhập mật khẩu" required>
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<label>Họ tên*</label>
+					<input type="text" id="employeeName" placeholder="Nhập họ tên" required>
+				</div>
+				<div class="form-group">
+					<label>Email</label>
+					<input type="email" id="employeeEmail" placeholder="Nhập email">
+				</div>
+			</div>
+			<div class="form-row">
+				<div class="form-group">
+					<label>Số điện thoại</label>
+					<input type="tel" id="employeePhone" placeholder="Nhập số điện thoại" inputmode="numeric" maxlength="10" pattern="^0\d{9}$">
+				</div>
+				<div class="form-group">
+					<label>Chức vụ</label>
+					<input type="text" id="employeePosition" placeholder="Nhập chức vụ">
+				</div>
+			</div>
+
+			<div class="form-actions">
+				<button type="submit" class="save-btn">Lưu nhân viên</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+ <!-- Edit Customer Modal -->
+ <div id="editCustomerModal" class="modal">
+     <div class="modal-content">
+                    <div class="modal-header">
+               <h2 style="color: white; text-align: center; width: 100%; margin: 0;">Sửa thông tin khách hàng</h2>
+               <!-- Removed close icon per requirement -->
+           </div>
+         <div class="modal-body">
+             <form id="editCustomerForm">
+                 <input type="hidden" id="edit-customer-id">
+                                                  <div class="form-row">
+                     <div class="form-group">
+                         <label for="edit-customer-name">Tên khách hàng *</label>
+                         <input type="text" id="edit-customer-name" required>
+                     </div>
+                 </div>
+                 <div class="form-row">
+                     <div class="form-group">
+                         <label for="edit-customer-tk-no">Tk nợ</label>
+                         <input type="text" id="edit-customer-tk-no" placeholder="Nhập Tk nợ">
+                     </div>
+                     <div class="form-group">
+                         <label for="edit-customer-tk-co">Tk có</label>
+                         <input type="text" id="edit-customer-tk-co" placeholder="Nhập Tk có">
+                     </div>
+                 </div>
+                 <div class="form-row">
+                     <div class="form-group">
+                         <label for="edit-customer-email">Email</label>
+                         <input type="email" id="edit-customer-email">
+                     </div>
+                     <div class="form-group">
+                         <label for="edit-customer-phone">Số điện thoại</label>
+                         <input type="tel" id="edit-customer-phone" inputmode="numeric" maxlength="10" pattern="^0\d{9}$">
+                     </div>
+                 </div>
+                 <div class="form-group">
+                     <label for="edit-customer-address">Địa chỉ</label>
+                     <textarea id="edit-customer-address" rows="3"></textarea>
+                 </div>
+                                 <div class="form-group">
+                    <label for="edit-customer-status">Trạng thái</label>
+                    <select id="edit-customer-status">
+                        <option value="true">Hoạt động</option>
+                        <option value="false">Không hoạt động</option>
+                    </select>
+                </div>
+             </form>
+         </div>
+         <div class="modal-footer">
+             <button class="btn btn-cancel" onclick="closeModal('editCustomerModal')">Hủy</button>
+             <button class="btn btn-success" onclick="updateCustomer()">
+                 <i class="fas fa-save"></i> Cập nhật
+             </button>
+         </div>
+     </div>
+ </div>
+
+      <!-- Edit Employee Modal -->
+   <div id="editEmployeeModal" class="modal">
+       <div class="modal-content">
+                     <div class="modal-header">
+              <h2 style="color: white; text-align: center; width: 100%; margin: 0;">Sửa thông tin nhân viên</h2>
+              <!-- Removed close icon per requirement -->
+          </div>
+          <div class="modal-body">
+              <form id="editEmployeeForm">
+                  <input type="hidden" id="edit-employee-id">
+                  <div class="form-row">
+                       <div class="form-group required">
+                          <label for="edit-employee-username">Tên đăng nhập *</label>
+                          <input type="text" id="edit-employee-username" required>
+                      </div>
+                      <div class="form-group">
+                          <label for="edit-employee-password">Mật khẩu mới (để trống nếu không đổi)</label>
+                          <input type="password" id="edit-employee-password">
+                      </div>
+                  </div>
+                  <div class="form-row">
+                      <div class="form-group">
+                          <label for="edit-employee-name">Tên nhân viên</label>
+                          <input type="text" id="edit-employee-name">
+                      </div>
+                      <div class="form-group">
+                          <label for="edit-employee-email">Email</label>
+                          <input type="email" id="edit-employee-email">
+                      </div>
+                  </div>
+                  <div class="form-row">
+                      <div class="form-group">
+                          <label for="edit-employee-phone">Số điện thoại</label>
+                          <input type="tel" id="edit-employee-phone" inputmode="numeric" maxlength="10" pattern="^0\d{9}$">
+                      </div>
+                      <div class="form-group">
+                          <label for="edit-employee-position">Chức vụ</label>
+                          <input type="text" id="edit-employee-position">
+                      </div>
+                  </div>
+                  <div class="form-group">
+                      <label for="edit-employee-status">Trạng thái</label>
+                      <select id="edit-employee-status">
+                          <option value="true">Hoạt động</option>
+                          <option value="false">Không hoạt động</option>
+                      </select>
+                  </div>
+              </form>
+          </div>
+          <div class="modal-footer">
+               <button class="btn btn-cancel" onclick="closeModal('editEmployeeModal')">Hủy</button>
+               <button class="btn btn-success" onclick="updateEmployee()">
+                   <i class="fas fa-save"></i> Cập nhật
+               </button>
+           </div>
+      </div>
+  </div>
+
+     <!-- Success Notification Modal -->
+   <div id="successNotificationModal" class="modal">
+       <div class="modal-content notification-modal">
+           <div class="modal-header">
+               <h2 style="color: white; text-align: center; width: 100%; margin: 0;">Thành công</h2>
+           </div>
+           <div class="modal-body">
+               <div class="success-message">
+                   <i class="fas fa-check-circle"></i>
+                   <p id="successMessage">Cập nhật thành công!</p>
+               </div>
+           </div>
+       </div>
+   </div>
+
+    <!-- Generic Alert Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content notification-modal">
+            <div class="modal-header">
+                <h2 style="color: white; text-align: center; width: 100%; margin: 0;">Thông báo</h2>
+            </div>
+            <div class="modal-body">
+                <div class="success-message">
+                    <p id="alertMessage">Vui lòng kiểm tra lại thông tin.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirmDeleteModal" class="modal">
+        <div class="modal-content notification-modal">
+            <div class="modal-header">
+                <h2 style="color: white; text-align: center; width: 100%; margin: 0;">Xác nhận</h2>
+            </div>
+            <div class="modal-body">
+                <div class="success-message">
+                    <p id="confirmMessage">Bạn có chắc chắn muốn xóa?</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeConfirm()">Hủy</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Xóa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Exit Modal (for clicking outside edit customer form) -->
+    <div id="confirmExitModal" class="modal">
+        <div class="modal-content notification-modal">
+            <div class="modal-header">
+                <h2 style="color: white; text-align: center; width: 100%; margin: 0;">Xác nhận</h2>
+            </div>
+            <div class="modal-body">
+                <div class="success-message">
+                    <p>Bạn muốn thoát hay không?</p>
+                </div>
+            </div>
+                         <div class="modal-footer" style="display: flex; justify-content: space-between;">
+                 <button class="btn btn-cancel" id="confirmExitStayBtn">Ở lại</button>
+                 <button class="btn btn-danger" id="confirmExitLeaveBtn">Thoát</button>
+             </div>
+        </div>
+    </div>
+
+<script>
+// Sử dụng global permission từ base.html để tránh trùng lặp gây xung đột
+// Ghi chú: các quyền được cung cấp qua window.userPermissions, window.checkUserPermissions, window.applyPermissionsToUI
+
+// Tab functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.getAttribute('data-tab');
+            
+            // Remove active class from all tabs
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active class to clicked tab
+            btn.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            // Load data for the active tab
+            if (tabName === 'customers') {
+                loadCustomers();
+            } else if (tabName === 'employees') {
+                loadEmployees();
+            }
+        });
+    });
+
+    // Kiểm tra quyền và áp dụng phân quyền (dùng global từ base.html)
+    if (window.checkUserPermissions) { window.checkUserPermissions(); }
+
+    // Load initial data for both tabs
+    loadCustomers();
+    loadEmployees();
+    
+    // Áp dụng phân quyền cho bảng nhân viên sau khi load dữ liệu
+    setTimeout(() => {
+        if (!(window.userPermissions && window.userPermissions.canManageEmployees)) {
+            const employeeActionButtons = document.querySelectorAll('#employees .btn');
+            employeeActionButtons.forEach(btn => {
+                btn.style.display = 'none';
+            });
+        }
+    }, 100);
+
+    // Add form submission event listeners
+    document.getElementById('addCustomerForm').addEventListener('submit', function(e) {
+        console.log('📝 Form submit event triggered');
+        e.preventDefault();
+        // Validate phone: 10 digits, starts with 0
+        const phoneInput = document.getElementById('customerPhone');
+        if (phoneInput){
+            phoneInput.value = (phoneInput.value||'').replace(/[^0-9]/g,'');
+            if (!/^0\d{9}$/.test(phoneInput.value)){
+                if (window.showErrorModal) { showErrorModal('Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'); } else { alert('Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'); }
+                phoneInput.focus();
+                return;
+            }
+        }
+        saveCustomer();
+    });
+    
+    document.getElementById('addEmployeeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveEmployee();
+    });
+
+    // Initialize auto-search with debounce for filters
+    function debounce(fn, delay){
+        let t; 
+        return function(){ 
+            clearTimeout(t); 
+            const args=arguments, ctx=this; 
+            t=setTimeout(function(){ fn.apply(ctx,args); }, delay||300); 
+        }; 
+    }
+    
+    // Customers
+    const cName = document.getElementById('customer-name');
+    const cEmail = document.getElementById('customer-email');
+    if (cName) cName.addEventListener('input', debounce(searchCustomers, 300));
+    if (cEmail) cEmail.addEventListener('input', debounce(searchCustomers, 300));
+    
+    // Employees
+    const eCode = document.getElementById('employee-code');
+    const eName = document.getElementById('employee-name');
+    if (eCode) eCode.addEventListener('input', debounce(searchEmployees, 300));
+    if (eName) eName.addEventListener('input', debounce(searchEmployees, 300));
+
+    // Realtime phone validation styling (10 digits, starts with 0)
+    function attachPhoneValidation(input){
+        if (!input) return;
+        function sanitizeAndValidate(){
+            input.value = (input.value||'').replace(/[^0-9]/g,'');
+            const ok = /^0\d{9}$/.test(input.value);
+            input.style.borderColor = (ok || input.value==='') ? '#ced4da' : '#dc3545';
+            input.style.boxShadow = (ok || input.value==='') ? '' : '0 0 0 0.2rem rgba(220,53,69,.25)';
+        }
+        input.addEventListener('input', sanitizeAndValidate);
+        input.addEventListener('blur', sanitizeAndValidate);
+        sanitizeAndValidate();
+        // Auto-prepend '0' on focus
+        input.addEventListener('focus', function(){
+            let digits = (input.value||'').replace(/[^0-9]/g,'');
+            if (digits.length === 0){
+                digits = '0';
+            } else if (!digits.startsWith('0')){
+                digits = '0' + digits.substring(0,9);
+            } else {
+                digits = digits.substring(0,10);
+            }
+            input.value = digits;
+            try { input.setSelectionRange(input.value.length, input.value.length); } catch(_) {}
+            sanitizeAndValidate();
+        });
+    }
+    attachPhoneValidation(document.getElementById('customerPhone'));
+    attachPhoneValidation(document.getElementById('edit-customer-phone'));
+    attachPhoneValidation(document.getElementById('employeePhone'));
+    attachPhoneValidation(document.getElementById('edit-employee-phone'));
+});
+
+// Customer functions
+function loadCustomers() {
+    fetch(`{{ BACKEND_URL }}/api/accounts/`)
+        .then(response => response.json())
+        .then(data => {
+            const customers = Array.isArray(data) ? data : (data.data || []);
+            displayCustomers(customers);
+        })
+        .catch(error => {
+            console.error('Error loading customers:', error);
+        });
+}
+
+// Hàm chuẩn hóa văn bản tiếng Việt để tìm kiếm
+function normalizeVietnameseText(text) {
+    if (!text) return "";
+    
+    // Mapping dấu tiếng Việt sang không dấu
+    const vietnameseMap = {
+        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+        'đ': 'd',
+        'À': 'A', 'Á': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
+        'Ă': 'A', 'Ằ': 'A', 'Ắ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
+        'Â': 'A', 'Ầ': 'A', 'Ấ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
+        'È': 'E', 'É': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
+        'Ê': 'E', 'Ề': 'E', 'Ế': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
+        'Ì': 'I', 'Í': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
+        'Ò': 'O', 'Ó': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
+        'Ô': 'O', 'Ồ': 'O', 'Ố': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
+        'Ơ': 'O', 'Ờ': 'O', 'Ớ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
+        'Ù': 'U', 'Ú': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
+        'Ư': 'U', 'Ừ': 'U', 'Ứ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
+        'Ỳ': 'Y', 'Ý': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
+        'Đ': 'D'
+    };
+    
+    // Thay thế dấu tiếng Việt
+    let normalized = text;
+    for (const [accented, plain] of Object.entries(vietnameseMap)) {
+        normalized = normalized.replace(new RegExp(accented, 'g'), plain);
+    }
+    
+    // Chuyển về chữ thường và loại bỏ khoảng trắng thừa
+    normalized = normalized.toLowerCase().trim();
+    
+    return normalized;
+}
+
+// Hàm tìm kiếm linh hoạt - hỗ trợ tìm kiếm dính liền và tách rời
+function flexibleSearch(searchText, targetText) {
+    if (!searchText || !targetText) return false;
+    
+    // Chuẩn hóa cả hai văn bản
+    const normalizedSearch = normalizeVietnameseText(searchText);
+    const normalizedTarget = normalizeVietnameseText(targetText);
+    
+    // 1. Tìm kiếm trực tiếp (bao gồm cả dính liền)
+    if (normalizedTarget.includes(normalizedSearch)) {
+        return true;
+    }
+    
+    // 2. Tìm kiếm khi tách từ (nếu searchText có thể tách thành nhiều từ)
+    const searchWords = normalizedSearch.split(/\s+/).filter(word => word.length > 0);
+    if (searchWords.length > 1) {
+        // Nếu có nhiều từ, kiểm tra xem tất cả từ có xuất hiện trong target không
+        return searchWords.every(word => normalizedTarget.includes(word));
+    }
+    
+    // 3. Tìm kiếm khi ghép từ (nếu searchText có thể là từ ghép)
+    if (normalizedSearch.length > 3) {
+        // Thử tách thành các từ có thể có
+        const possibleCombinations = generatePossibleCombinations(normalizedSearch);
+        for (const combination of possibleCombinations) {
+            if (normalizedTarget.includes(combination)) {
+                return true;
+            }
+        }
+    }
+    
+    // 4. Tìm kiếm fuzzy - kiểm tra độ tương tự
+    if (calculateSimilarity(normalizedSearch, normalizedTarget) > 0.7) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Hàm tạo các tổ hợp từ có thể có từ một chuỗi dính liền
+function generatePossibleCombinations(text) {
+    const combinations = [];
+    
+    // Thêm chính nó
+    combinations.push(text);
+    
+    // Thêm các biến thể có thể có
+    if (text.length > 4) {
+        // Thử chèn khoảng trắng ở các vị trí khác nhau
+        for (let i = 2; i < text.length - 1; i++) {
+            const part1 = text.substring(0, i);
+            const part2 = text.substring(i);
+            combinations.push(part1 + ' ' + part2);
+        }
+    }
+    
+    // Thêm các biến thể thay thế ký tự tương tự
+    const similarChars = {
+        'd': ['d', 'đ'],
+        'đ': ['d', 'đ'],
+        'i': ['i', 'y'],
+        'y': ['i', 'y'],
+        'u': ['u', 'ư'],
+        'ư': ['u', 'ư'],
+        'o': ['o', 'ô', 'ơ'],
+        'ô': ['o', 'ô', 'ơ'],
+        'ơ': ['o', 'ô', 'ơ'],
+        'a': ['a', 'ă', 'â'],
+        'ă': ['a', 'ă', 'â'],
+        'â': ['a', 'ă', 'â'],
+        'e': ['e', 'ê'],
+        'ê': ['e', 'ê']
+    };
+    
+    // Tạo biến thể với các ký tự tương tự
+    for (const [char, alternatives] of Object.entries(similarChars)) {
+        if (text.includes(char)) {
+            for (const alt of alternatives) {
+                if (alt !== char) {
+                    combinations.push(text.replace(new RegExp(char, 'g'), alt));
+                }
+            }
+        }
+    }
+    
+    return combinations;
+}
+
+// Hàm tính độ tương tự giữa hai chuỗi (Levenshtein distance)
+function calculateSimilarity(str1, str2) {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+            if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    
+    const maxLength = Math.max(str1.length, str2.length);
+    const similarity = 1 - (matrix[str2.length][str1.length] / maxLength);
+    return similarity;
+}
+
+function searchCustomers() {
+    const name = normalizeVietnameseText(document.getElementById('customer-name').value);
+    const email = normalizeVietnameseText(document.getElementById('customer-email').value);
+
+    console.log('🔍 Searching customers with:', { name, email });
+
+    // Hiển thị loading indicator
+    const tbody = document.getElementById('customer-table-body');
+    tbody.innerHTML = '<tr><td colspan="9" class="searching">Đang tìm kiếm...</td></tr>';
+
+    if (!name && !email) {
+        // Nếu rỗng, tải toàn bộ danh sách
+        console.log('🔄 No search criteria, loading all customers');
+        loadCustomers();
+        return;
+    }
+
+    // Client-side filtering giống như orders.html
+    console.log('🔍 Performing client-side search...');
+    
+    // Lấy dữ liệu từ bảng hiện tại hoặc từ API
+    fetch(`{{ BACKEND_URL }}/api/accounts/`)
+        .then(response => response.json())
+        .then(data => {
+            const customers = Array.isArray(data) ? data : (data.data || []);
+            console.log(`📊 Found ${customers.length} customers in database`);
+            
+            // Lọc dữ liệu theo tiêu chí tìm kiếm
+            const filteredCustomers = customers.filter(customer => {
+                let match = true;
+                
+                // Kiểm tra tên khách hàng - sử dụng tìm kiếm linh hoạt
+                if (name) {
+                    const customerName = normalizeVietnameseText(customer.ten_tk || '');
+                    if (!flexibleSearch(name, customerName)) {
+                        match = false;
+                    }
+                }
+                
+                // Kiểm tra email - sử dụng tìm kiếm linh hoạt
+                if (email) {
+                    const customerEmail = normalizeVietnameseText(customer.email || '');
+                    if (!flexibleSearch(email, customerEmail)) {
+                        match = false;
+                    }
+                }
+                
+                return match;
+            });
+            
+            console.log(`✅ Search found ${filteredCustomers.length} customers`);
+            displayCustomers(filteredCustomers);
+        })
+        .catch(error => {
+            console.error('❌ Error searching customers:', error);
+            showAlert('Có lỗi xảy ra khi tìm kiếm');
+            loadCustomers(); // Tải lại danh sách gốc nếu có lỗi
+        });
+}
+
+function displayCustomers(customers) {
+    console.log('🎯 Displaying customers:', customers);
+    
+    const tbody = document.getElementById('customer-table-body');
+    tbody.innerHTML = '';
+
+    if (customers.length === 0) {
+        console.log('⚠️ No customers to display');
+        tbody.innerHTML = '<tr><td colspan="9" class="no-data">Chưa có dữ liệu khách hàng</td></tr>';
+        
+        // Cập nhật tổng số
+        const totalCount = document.getElementById('customer-total-count');
+        if (totalCount) {
+            totalCount.textContent = 'Tổng: 0';
+        }
+        return;
+    }
+
+    // Sắp xếp khách hàng theo ID để STT cố định
+    customers.sort((a, b) => a.id - b.id);
+    console.log('📊 Sorted customers:', customers);
+
+    customers.forEach((customer, index) => {
+        console.log(`👤 Processing customer ${index + 1}:`, customer);
+        const row = document.createElement('tr');
+        // STT tự động đánh lại từ 1, 2, 3... thay vì dùng customer.id
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${customer.ten_tk || ''}</td>
+            <td>${customer.tk_no || '-'}</td>
+            <td>${customer.tk_co || '-'}</td>
+            <td>${customer.email || ''}</td>
+            <td>${customer.so_dt || ''}</td>
+            <td>${customer.dia_chi || ''}</td>
+            <td><span class="status-badge ${customer.trang_thai ? 'active' : 'inactive'}">${customer.trang_thai ? 'Hoạt động' : 'Không hoạt động'}</span></td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editCustomer(${customer.id})">Sửa</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteCustomer(${customer.id})" ${!userPermissions.canDelete ? 'style="display: none;"' : ''}>Xóa</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Cập nhật tổng số
+    const totalCount = document.getElementById('customer-total-count');
+    if (totalCount) {
+        totalCount.textContent = `Tổng: ${customers.length}`;
+    }
+    
+    console.log(`✅ Displayed ${customers.length} customers successfully`);
+}
+
+function clearCustomerFilters() {
+    document.getElementById('customer-name').value = '';
+    document.getElementById('customer-email').value = '';
+    
+    // Tải lại dữ liệu và hiển thị tổng số
+    loadCustomers();
+}
+
+function openAddCustomerModal() {
+    // Reset form trước khi hiển thị
+    document.getElementById('addCustomerForm').reset();
+    document.getElementById('addCustomerModal').style.display = 'block';
+}
+
+function closeAddCustomerModal() {
+    closeModal('addCustomerModal');
+}
+
+// Kiểm tra form thêm khách có dữ liệu để cảnh báo khi đóng
+function hasAddCustomerFormData(){
+    const name = (document.getElementById('customerName')?.value || '').trim();
+    const email = (document.getElementById('customerEmail')?.value || '').trim();
+    const phone = (document.getElementById('customerPhone')?.value || '').trim();
+    const address = (document.getElementById('customerAddress')?.value || '').trim();
+    const tkNo = (document.getElementById('customerTkNo')?.value || '').trim();
+    const tkCo = (document.getElementById('customerTkCo')?.value || '').trim();
+    return !!(name || email || phone || address || tkNo || tkCo);
+}
+
+// Cố gắng đóng modal thêm khách hàng theo logic tương tự products.html
+function attemptCloseAddCustomerModal(){
+    if (hasAddCustomerFormData()){
+        const m = document.getElementById('confirmExitModal');
+        if (!m) { document.getElementById('addCustomerModal').style.display='none'; return; }
+        m.style.display = 'block';
+        const stay = document.getElementById('confirmExitStayBtn');
+        const leave = document.getElementById('confirmExitLeaveBtn');
+        if (stay) stay.onclick = function(){ m.style.display='none'; };
+        if (leave) leave.onclick = function(){
+            m.style.display='none';
+            document.getElementById('addCustomerForm').reset();
+            document.getElementById('addCustomerModal').style.display = 'none';
+        };
+    } else {
+        document.getElementById('addCustomerModal').style.display='none';
+    }
+}
+
+function saveCustomer() {
+    console.log('🚀 Bắt đầu lưu khách hàng...');
+    
+    // Lấy giá trị từ form
+    const customerNameEl = document.getElementById('customerName');
+    const customerEmailEl = document.getElementById('customerEmail');
+    const customerPhoneEl = document.getElementById('customerPhone');
+    const customerAddressEl = document.getElementById('customerAddress');
+    const customerTkNoEl = document.getElementById('customerTkNo');
+    const customerTkCoEl = document.getElementById('customerTkCo');
+    
+    console.log('🔍 Form elements found:', {
+        customerNameEl: !!customerNameEl,
+        customerEmailEl: !!customerEmailEl,
+        customerPhoneEl: !!customerPhoneEl,
+        customerAddressEl: !!customerAddressEl,
+        customerTkNoEl: !!customerTkNoEl,
+        customerTkCoEl: !!customerTkCoEl
+    });
+    
+    const customerName = customerNameEl ? customerNameEl.value : '';
+    const customerEmail = customerEmailEl ? customerEmailEl.value : '';
+    const customerPhone = customerPhoneEl ? customerPhoneEl.value : '';
+    const customerAddress = customerAddressEl ? customerAddressEl.value : '';
+    const customerTkNo = customerTkNoEl ? customerTkNoEl.value : '';
+    const customerTkCo = customerTkCoEl ? customerTkCoEl.value : '';
+    
+    console.log('📝 Raw form values:', {
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerAddress,
+        customerTkNo,
+        customerTkCo
+    });
+    
+    const formData = {
+        ten_tk: customerName,
+        email: customerEmail,
+        so_dt: customerPhone,
+        dia_chi: customerAddress,
+        tk_no: customerTkNo,
+        tk_co: customerTkCo,
+        trang_thai: true // Default to active
+    };
+
+    console.log('📋 Form data:', formData);
+
+    // Validation
+    console.log('🔍 Validating form data...');
+    console.log('🔍 ten_tk value:', formData.ten_tk);
+    console.log('🔍 ten_tk trimmed:', formData.ten_tk.trim());
+    console.log('🔍 ten_tk length:', formData.ten_tk.trim().length);
+    console.log('🔍 ten_tk type:', typeof formData.ten_tk);
+    
+    if (!formData.ten_tk || formData.ten_tk.trim() === '') {
+      console.log('❌ Validation failed: ten_tk is empty');
+      if (window.showErrorModal) { showErrorModal('Vui lòng nhập tên khách hàng!'); } else { alert('Vui lòng nhập tên khách hàng!'); }
+      return;
+    }
+    
+    // Kiểm tra xem có dữ liệu thực sự không
+    if (formData.ten_tk.trim().length < 2) {
+      console.log('❌ Validation failed: ten_tk too short');
+      if (window.showErrorModal) { showErrorModal('Tên khách hàng phải có ít nhất 2 ký tự!'); } else { alert('Tên khách hàng phải có ít nhất 2 ký tự!'); }
+      return;
+    }
+    
+    console.log('✅ Validation passed, proceeding with save...');
+    
+    console.log('📡 Gửi request đến:', `{{ BACKEND_URL }}/api/accounts/`);
+    
+    fetch(`{{ BACKEND_URL }}/api/accounts/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => {
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response ok:', response.ok);
+        return response.json();
+    })
+    .then(data => {
+        console.log('📡 Response data:', data);
+        if (data.success === false) {
+            console.error('❌ Backend trả về lỗi:', data.error);
+            showAlert(data.error || 'Vui lòng kiểm tra lại thông tin');
+        } else {
+            console.log('✅ Lưu khách hàng thành công!');
+            // Bỏ xác nhận thoát ngay sau khi lưu thành công
+            window.__suppressAddCustomerConfirm = true;
+            try{
+            document.getElementById('addCustomerForm').reset();
+                document.getElementById('addCustomerModal').style.display = 'none';
+            }finally{
+                setTimeout(function(){ window.__suppressAddCustomerConfirm = false; }, 0);
+            }
+            loadCustomers();
+            if (window.showSuccessModal) { showSuccessModal('Thêm khách hàng thành công!'); }
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error saving customer:', error);
+        showAlert('Có lỗi xảy ra khi thêm khách hàng');
+    });
+}
+
+// Employee functions
+function loadEmployees() {
+    console.log('🔄 Loading employees...');
+    console.log('📡 Making request to /api/users');
+    
+    fetch(`{{ BACKEND_URL }}/api/users/`)
+        .then(response => {
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response ok:', response.ok);
+            console.log('📡 Response headers:', response.headers);
+            return response.json();
+        })
+        .then(data => {
+            const arr = Array.isArray(data) ? data : (data.data || []);
+            console.log('📊 Employee data received:', arr);
+            if (arr && arr.length > 0) {
+                console.log(`✅ Found ${arr.length} employees`);
+                console.log('📋 Employee details:', arr);
+                displayEmployees(arr);
+            } else {
+                console.log('⚠️ No employee data found in response');
+                displayEmployees([]);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error loading employees:', error);
+            console.error('❌ Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+            displayEmployees([]);
+        });
+}
+
+function searchEmployees() {
+    const code = normalizeVietnameseText(document.getElementById('employee-code').value);
+    const name = normalizeVietnameseText(document.getElementById('employee-name').value);
+
+    console.log('🔍 Searching employees with:', { code, name });
+
+    // Hiển thị loading indicator
+    const tbody = document.getElementById('employee-table-body');
+    tbody.innerHTML = '<tr><td colspan="8" class="searching">Đang tìm kiếm...</td></tr>';
+
+    if (!code && !name) {
+        // Nếu rỗng, tải toàn bộ danh sách
+        console.log('🔄 No search criteria, loading all employees');
+        loadEmployees();
+        return;
+    }
+
+    // Client-side filtering giống như orders.html
+    console.log('🔍 Performing client-side search...');
+    
+    // Lấy dữ liệu từ bảng hiện tại hoặc từ API
+    fetch(`{{ BACKEND_URL }}/api/users/`)
+        .then(response => response.json())
+        .then(data => {
+            const employees = Array.isArray(data) ? data : (data.data || []);
+            console.log(`📊 Found ${employees.length} employees in database`);
+            
+            // Lọc dữ liệu theo tiêu chí tìm kiếm
+            const filteredEmployees = employees.filter(employee => {
+                let match = true;
+                
+                // Kiểm tra mã nhân viên (username) - sử dụng tìm kiếm linh hoạt
+                if (code) {
+                    const employeeCode = normalizeVietnameseText(employee.username || '');
+                    if (!flexibleSearch(code, employeeCode)) {
+                        match = false;
+                    }
+                }
+                
+                // Kiểm tra tên nhân viên - sử dụng tìm kiếm linh hoạt
+                if (name) {
+                    const employeeName = normalizeVietnameseText(employee.name || '');
+                    if (!flexibleSearch(name, employeeName)) {
+                        match = false;
+                    }
+                }
+                
+                return match;
+            });
+            
+            console.log(`✅ Search found ${filteredEmployees.length} employees`);
+            displayEmployees(filteredEmployees);
+        })
+        .catch(error => {
+            console.error('❌ Error searching employees:', error);
+            showAlert('Có lỗi xảy ra khi tìm kiếm');
+            loadEmployees(); // Tải lại danh sách gốc nếu có lỗi
+        });
+}
+
+function displayEmployees(employees) {
+    console.log('🎯 Displaying employees:', employees);
+    
+    const tbody = document.getElementById('employee-table-body');
+    tbody.innerHTML = '';
+
+    if (employees.length === 0) {
+        console.log('⚠️ No employees to display');
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">Chưa có dữ liệu nhân viên</td></tr>';
+        
+        // Cập nhật tổng số
+        const totalCount = document.getElementById('employee-total-count');
+        if (totalCount) {
+            totalCount.textContent = 'Tổng: 0';
+        }
+        return;
+    }
+
+    // Sắp xếp nhân viên theo ID để STT cố định
+    employees.sort((a, b) => a.id - b.id);
+    console.log('📊 Sorted employees:', employees);
+
+    employees.forEach((employee, index) => {
+        console.log(`👤 Processing employee ${index + 1}:`, employee);
+        const row = document.createElement('tr');
+        // STT tự động đánh lại từ 1, 2, 3... thay vì dùng employee.id
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${employee.username || ''}</td>
+            <td>${employee.name || ''}</td>
+            <td>${employee.email || ''}</td>
+            <td>${employee.phone || ''}</td>
+            <td>${employee.position || ''}</td>
+            <td>
+                <span class="status-badge ${employee.status ? 'active' : 'inactive'}">${employee.status ? 'Hoạt động' : 'Không hoạt động'}</span>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editEmployee(${employee.id})" ${!userPermissions.canManageEmployees ? 'style="display: none;"' : ''}>Sửa</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteEmployee(${employee.id})" ${!userPermissions.canDelete || !userPermissions.canManageEmployees ? 'style="display: none;"' : ''}>Xóa</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    // Cập nhật tổng số
+    const totalCount = document.getElementById('employee-total-count');
+    if (totalCount) {
+        totalCount.textContent = `Tổng: ${employees.length}`;
+    }
+    
+    console.log(`✅ Displayed ${employees.length} employees successfully`);
+    
+    // Áp dụng phân quyền cho các nút sau khi hiển thị bảng
+    if (!(window.userPermissions && window.userPermissions.canManageEmployees)) {
+        const employeeActionButtons = tbody.querySelectorAll('.btn');
+        employeeActionButtons.forEach(btn => {
+            btn.style.display = 'none';
+        });
+        console.log('🔒 Đã ẩn các nút quản lý nhân viên cho user không có quyền');
+    }
+}
+
+function clearEmployeeFilters() {
+    document.getElementById('employee-code').value = '';
+    document.getElementById('employee-name').value = '';
+    
+    // Tải lại dữ liệu và hiển thị tổng số
+    loadEmployees();
+}
+
+function openAddEmployeeModal() {
+    // Kiểm tra quyền quản lý nhân viên
+    if (!(window.userPermissions && window.userPermissions.canManageEmployees)) {
+        showAlert('Bạn không có quyền thêm nhân viên!');
+        return;
+    }
+    
+    // Reset form trước khi hiển thị
+    document.getElementById('addEmployeeForm').reset();
+    document.getElementById('addEmployeeModal').style.display = 'block';
+}
+
+function closeAddEmployeeModal() {
+    closeModal('addEmployeeModal');
+}
+
+function saveEmployee() {
+    // Kiểm tra quyền quản lý nhân viên
+    if (!userPermissions.canManageEmployees) {
+        showAlert('Bạn không có quyền thêm nhân viên!');
+        return;
+    }
+    
+    const formData = {
+        username: document.getElementById('employeeUsername').value,
+        password: document.getElementById('employeePassword').value,
+        name: document.getElementById('employeeName').value,
+        email: document.getElementById('employeeEmail').value,
+        phone: document.getElementById('employeePhone').value,
+        position: document.getElementById('employeePosition').value,
+
+        status: true // Default to active
+    };
+
+    // Validate required fields
+    if (!formData.username || !formData.password) {
+        showAlert('Vui lòng nhập Tên đăng nhập và Mật khẩu');
+        return;
+    }
+
+    fetch(`{{ BACKEND_URL }}/api/users/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success === false) {
+            showAlert(data.error || 'Vui lòng kiểm tra lại thông tin');
+        } else {
+            window.__suppressAddEmployeeConfirm = true;
+            try{
+            document.getElementById('addEmployeeForm').reset();
+                document.getElementById('addEmployeeModal').style.display = 'none';
+            }finally{
+                setTimeout(function(){ window.__suppressAddEmployeeConfirm = false; }, 0);
+            }
+            loadEmployees();
+            if (window.showSuccessModal) { showSuccessModal('Thêm nhân viên thành công!'); }
+        }
+    })
+    .catch(error => {
+        console.error('Error saving employee:', error);
+        showAlert('Có lỗi xảy ra khi thêm nhân viên');
+    });
+}
+
+ // Edit and Delete functions for customers
+ function editCustomer(customerId) {
+    fetch(`{{ BACKEND_URL }}/api/accounts/${customerId}`)
+        .then(response => response.json())
+        .then(customer => {
+            document.getElementById('edit-customer-id').value = customer.id;
+             document.getElementById('edit-customer-name').value = customer.ten_tk || '';
+            document.getElementById('edit-customer-tk-no').value = customer.tk_no || '';
+            document.getElementById('edit-customer-tk-co').value = customer.tk_co || '';
+            document.getElementById('edit-customer-email').value = customer.email || '';
+             document.getElementById('edit-customer-phone').value = customer.so_dt || '';
+             document.getElementById('edit-customer-address').value = customer.dia_chi || '';
+             document.getElementById('edit-customer-status').value = customer.trang_thai ? 'true' : 'false';
+             
+             // Lưu dữ liệu gốc vào data-original để so sánh
+             document.getElementById('edit-customer-name').setAttribute('data-original', customer.ten_tk || '');
+             document.getElementById('edit-customer-tk-no').setAttribute('data-original', customer.tk_no || '');
+             document.getElementById('edit-customer-tk-co').setAttribute('data-original', customer.tk_co || '');
+             document.getElementById('edit-customer-email').setAttribute('data-original', customer.email || '');
+             document.getElementById('edit-customer-phone').setAttribute('data-original', customer.so_dt || '');
+             document.getElementById('edit-customer-address').setAttribute('data-original', customer.dia_chi || '');
+             document.getElementById('edit-customer-status').setAttribute('data-original', customer.trang_thai ? 'true' : 'false');
+            
+            document.getElementById('editCustomerModal').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error loading customer data:', error);
+            if (window.showErrorModal) { showErrorModal('Có lỗi xảy ra khi tải thông tin khách hàng'); } else { alert('Có lỗi xảy ra khi tải thông tin khách hàng'); }
+        });
+}
+
+   function updateCustomer() {
+    const customerId = document.getElementById('edit-customer-id').value;
+    // Validate phone: 10 digits, starts with 0
+    const phoneEl = document.getElementById('edit-customer-phone');
+    if (phoneEl){
+        phoneEl.value = (phoneEl.value||'').replace(/[^0-9]/g,'');
+        if (!/^0\d{9}$/.test(phoneEl.value)){
+            if (window.showErrorModal) { showErrorModal('Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'); } else { alert('Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'); }
+            phoneEl.focus();
+            return;
+        }
+    }
+    const formData = {
+        ten_tk: document.getElementById('edit-customer-name').value,
+        tk_no: document.getElementById('edit-customer-tk-no').value,
+        tk_co: document.getElementById('edit-customer-tk-co').value,
+        email: document.getElementById('edit-customer-email').value,
+        so_dt: document.getElementById('edit-customer-phone').value,
+        dia_chi: document.getElementById('edit-customer-address').value,
+        trang_thai: document.getElementById('edit-customer-status').value === 'true'
+    };
+
+      fetch(`{{ BACKEND_URL }}/api/accounts/${customerId}`, {
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData)
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.success === false) {
+              showAlert(data.error);
+          } else {
+              // Bỏ xác nhận thoát ngay sau khi cập nhật thành công
+              window.__suppressEditCustomerConfirm = true;
+              try{
+                  document.getElementById('editCustomerForm').reset();
+                  document.getElementById('editCustomerModal').style.display = 'none';
+              }finally{
+                  setTimeout(function(){ window.__suppressEditCustomerConfirm = false; }, 0);
+              }
+              loadCustomers();
+              if (window.showSuccessModal) { showSuccessModal('Cập nhật khách hàng thành công!'); }
+          }
+      })
+      .catch(error => {
+          console.error('Error updating customer:', error);
+          showAlert('Có lỗi xảy ra khi cập nhật khách hàng');
+      });
+  }
+
+function deleteCustomer(customerId) {
+    // Kiểm tra quyền xóa
+    if (!(window.userPermissions && window.userPermissions.canDelete)) {
+        showAlert('Bạn không có quyền xóa khách hàng!');
+        return;
+    }
+    // Xác nhận xóa dùng popup chuẩn
+    const doDelete = function(){
+        fetch(`{{ BACKEND_URL }}/api/accounts/${customerId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if (data && data.success === true){
+                loadCustomers();
+                if (window.showSuccessModal) { showSuccessModal('Xóa khách hàng thành công!'); }
+            } else {
+                showAlert((data && data.error) || 'Có lỗi xảy ra khi xóa khách hàng');
+            }
+        })
+        .catch(err=>{
+            console.error('Error deleting customer:', err);
+            showAlert('Có lỗi xảy ra khi xóa khách hàng. Vui lòng thử lại.');
+        });
+    };
+    if (window.showConfirm) { return showConfirm('Bạn có chắc chắn muốn xóa khách hàng này?', doDelete); }
+    if (window.openPopup) { return openPopup('confirm', 'Bạn có chắc chắn muốn xóa khách hàng này?', doDelete); }
+    if (confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) doDelete();
+}
+
+ // Edit and Delete functions for employees
+ function editEmployee(employeeId) {
+    // Kiểm tra quyền quản lý nhân viên
+    if (!(window.userPermissions && window.userPermissions.canManageEmployees)) {
+        showAlert('Bạn không có quyền sửa nhân viên!');
+        return;
+    }
+    
+     fetch(`{{ BACKEND_URL }}/api/users/${employeeId}`)
+         .then(response => response.json())
+         .then(employee => {
+             document.getElementById('edit-employee-id').value = employee.id;
+             document.getElementById('edit-employee-username').value = employee.username || '';
+             document.getElementById('edit-employee-password').value = ''; // Không hiển thị mật khẩu cũ
+             document.getElementById('edit-employee-name').value = employee.name || '';
+            document.getElementById('edit-employee-username').value = employee.username || '';
+             document.getElementById('edit-employee-email').value = employee.email || '';
+             document.getElementById('edit-employee-phone').value = employee.phone || '';
+             document.getElementById('edit-employee-position').value = employee.position || '';
+            document.getElementById('edit-employee-status').value = employee.status ? 'true' : 'false';
+            
+            // Lưu dữ liệu gốc vào data-original để so sánh
+            document.getElementById('edit-employee-username').setAttribute('data-original', employee.username || '');
+            document.getElementById('edit-employee-name').setAttribute('data-original', employee.name || '');
+            document.getElementById('edit-employee-email').setAttribute('data-original', employee.email || '');
+            document.getElementById('edit-employee-phone').setAttribute('data-original', employee.phone || '');
+            document.getElementById('edit-employee-position').setAttribute('data-original', employee.position || '');
+            document.getElementById('edit-employee-status').setAttribute('data-original', employee.status ? 'true' : 'false');
+             
+             document.getElementById('editEmployeeModal').style.display = 'block';
+         })
+         .catch(error => {
+             console.error('Error loading employee data:', error);
+             if (window.showErrorModal) { showErrorModal('Có lỗi xảy ra khi tải thông tin nhân viên'); } else { alert('Có lỗi xảy ra khi tải thông tin nhân viên'); }
+         });
+ }
+
+   function updateEmployee() {
+      // Kiểm tra quyền quản lý nhân viên
+      if (!userPermissions.canManageEmployees) {
+          showAlert('Bạn không có quyền cập nhật nhân viên!');
+          return;
+      }
+      
+      const employeeId = document.getElementById('edit-employee-id').value;
+      const formData = {
+          username: document.getElementById('edit-employee-username').value,
+          password: document.getElementById('edit-employee-password').value,
+          name: document.getElementById('edit-employee-name').value,
+          email: document.getElementById('edit-employee-email').value,
+          phone: document.getElementById('edit-employee-phone').value,
+          position: document.getElementById('edit-employee-position').value,
+          status: document.getElementById('edit-employee-status').value === 'true'
+      };
+
+      fetch(`{{ BACKEND_URL }}/api/users/${employeeId}`, {
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData)
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.success === false) {
+              showAlert(data.error);
+          } else {
+              window.__suppressEditEmployeeConfirm = true;
+              try{
+                  document.getElementById('editEmployeeForm').reset();
+                  document.getElementById('editEmployeeModal').style.display = 'none';
+              }finally{
+                  setTimeout(function(){ window.__suppressEditEmployeeConfirm = false; }, 0);
+              }
+              loadEmployees();
+              if (window.showSuccessModal) { showSuccessModal('Cập nhật nhân viên thành công!'); }
+          }
+      })
+      .catch(error => {
+          console.error('Error updating employee:', error);
+          showAlert('Có lỗi xảy ra khi cập nhật nhân viên');
+      });
+  }
+
+function deleteEmployee(employeeId) {
+    // Kiểm tra quyền xóa nhân viên
+    if (!(window.userPermissions && window.userPermissions.canDelete) || !(window.userPermissions && window.userPermissions.canManageEmployees)) {
+        showAlert('Bạn không có quyền xóa nhân viên!');
+        return;
+    }
+    const doDelete = function(){
+        fetch(`{{ BACKEND_URL }}/api/users/${employeeId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if (data && data.success === true){
+                loadEmployees();
+                if (window.showSuccessModal) { showSuccessModal('Xóa nhân viên thành công!'); }
+            } else {
+                showAlert((data && data.error) || 'Có lỗi xảy ra khi xóa nhân viên');
+            }
+        })
+        .catch(err=>{
+            console.error('Error deleting employee:', err);
+            showAlert('Có lỗi xảy ra khi xóa nhân viên. Vui lòng thử lại.');
+        });
+    };
+    if (window.showConfirm) { return showConfirm('Bạn có chắc chắn muốn xóa nhân viên này?', doDelete); }
+    if (window.openPopup) { return openPopup('confirm', 'Bạn có chắc chắn muốn xóa nhân viên này?', doDelete); }
+    if (confirm('Bạn có chắc chắn muốn xóa nhân viên này?')) doDelete();
+}
+
+ // Success notification functions (proxy to global modal)
+ function showSuccessNotification(message) {
+     if (window.showSuccessModal) { window.showSuccessModal(message || 'Thành công'); return; }
+     alert(message || 'Thành công');
+ }
+
+ function closeSuccessNotification() {
+     if (window.hideSuccessModal) { window.hideSuccessModal(); }
+ }
+
+  // Alert helper
+  function showAlert(message) {
+      if (window.showErrorModal) { window.showErrorModal(message); return; }
+      const el = document.getElementById('alertModal');
+      const msg = document.getElementById('alertMessage');
+      if (el && msg){
+          msg.textContent = message;
+          el.style.display = 'block';
+          setTimeout(()=>{ el.style.display='none'; }, 3000);
+      }
+  }
+
+  // Confirm helper
+  function closeConfirm() {
+      document.getElementById('confirmDeleteModal').style.display = 'none';
+      // Xóa các biến lưu trữ
+      if (window.customerToDelete) {
+          delete window.customerToDelete;
+      }
+      if (window.employeeToDelete) {
+          delete window.employeeToDelete;
+      }
+  }
+
+ // Close modal when clicking outside
+document.addEventListener('click', function(event) {
+     const modals = document.querySelectorAll('.modal');
+     modals.forEach(modal => {
+         if (event.target === modal) {
+            // Chỉ xử lý cho các modal chính, không phải modal xác nhận
+            if (modal.id === 'confirmExitModal' || modal.id === 'confirmDeleteModal' || 
+                modal.id === 'successNotificationModal' || modal.id === 'alertModal') {
+                return;
+            }
+            
+            // Bỏ xác nhận thoát sau khi lưu thành công ở Add Customer
+            if (modal.id === 'addCustomerModal' && window.__suppressAddCustomerConfirm) {
+                window.__suppressAddCustomerConfirm = false;
+                modal.style.display = 'none';
+                return;
+            }
+            
+            // Kiểm tra nếu có dữ liệu thay đổi trong form
+            if (hasFormDataChanged(modal.id)) {
+                // Có dữ liệu thay đổi -> hiển thị xác nhận thoát
+                     document.getElementById('confirmExitModal').style.display = 'block';
+                
+                     // Gán sự kiện cho các nút
+                     document.getElementById('confirmExitStayBtn').onclick = function() {
+                         document.getElementById('confirmExitModal').style.display = 'none';
+                     };
+                     document.getElementById('confirmExitLeaveBtn').onclick = function() {
+                         document.getElementById('confirmExitModal').style.display = 'none';
+                         
+                         // Xóa dữ liệu và đóng modal
+                    if (modal.id === 'editCustomerModal') {
+                             document.getElementById('editCustomerForm').reset();
+                             document.getElementById('editCustomerModal').style.display = 'none';
+                         } else if (modal.id === 'editEmployeeModal') {
+                             document.getElementById('editEmployeeForm').reset();
+                             document.getElementById('editEmployeeModal').style.display = 'none';
+                         }
+                     };
+                 } else {
+                // Không có dữ liệu thay đổi hoặc là modal tạo mới -> đóng ngay
+                 modal.style.display = 'none';
+             }
+         }
+     });
+});
+
+// Hàm kiểm tra dữ liệu thay đổi trong form
+function hasFormDataChanged(modalId) {
+    let hasData = false;
+    
+    if (modalId === 'addCustomerModal') {
+        // Với popup thêm khách hàng: xác nhận nếu có dữ liệu
+        hasData = hasAddCustomerFormData();
+        
+    } else if (modalId === 'addEmployeeModal') {
+        // Với popup thêm nhân viên: xác nhận nếu có dữ liệu
+        hasData = hasAddEmployeeFormData();
+        
+    } else if (modalId === 'editCustomerModal') {
+        // Kiểm tra form sửa khách hàng - so sánh với dữ liệu gốc
+        const currentName = document.getElementById('edit-customer-name').value.trim();
+        const currentTkNo = document.getElementById('edit-customer-tk-no').value.trim();
+        const currentTkCo = document.getElementById('edit-customer-tk-co').value.trim();
+        const currentEmail = document.getElementById('edit-customer-email').value.trim();
+        const currentPhone = document.getElementById('edit-customer-phone').value.trim();
+        const currentAddress = document.getElementById('edit-customer-address').value.trim();
+        const currentStatus = document.getElementById('edit-customer-status').value;
+        
+        // So sánh với dữ liệu gốc (lưu trong data attributes)
+        const originalName = document.getElementById('edit-customer-name').getAttribute('data-original') || '';
+        const originalTkNo = document.getElementById('edit-customer-tk-no').getAttribute('data-original') || '';
+        const originalTkCo = document.getElementById('edit-customer-tk-co').getAttribute('data-original') || '';
+        const originalEmail = document.getElementById('edit-customer-email').getAttribute('data-original') || '';
+        const originalPhone = document.getElementById('edit-customer-phone').getAttribute('data-original') || '';
+        const originalAddress = document.getElementById('edit-customer-address').getAttribute('data-original') || '';
+        const originalStatus = document.getElementById('edit-customer-status').getAttribute('data-original') || 'true';
+        
+        hasData = (currentName !== originalName) || 
+                  (currentTkNo !== originalTkNo) || 
+                  (currentTkCo !== originalTkCo) || 
+                  (currentEmail !== originalEmail) || 
+                  (currentPhone !== originalPhone) || 
+                  (currentAddress !== originalAddress) || 
+                  (currentStatus !== originalStatus);
+        
+    } else if (modalId === 'editEmployeeModal') {
+        // Kiểm tra form sửa nhân viên - so sánh với dữ liệu gốc
+        const currentUsername = document.getElementById('edit-employee-username').value.trim();
+        const currentPassword = document.getElementById('edit-employee-password').value.trim();
+        const currentName = document.getElementById('edit-employee-name').value.trim();
+        const currentEmail = document.getElementById('edit-employee-email').value.trim();
+        const currentPhone = document.getElementById('edit-employee-phone').value.trim();
+        const currentPosition = document.getElementById('edit-employee-position').value.trim();
+        const currentStatus = document.getElementById('edit-employee-status').value;
+        
+        // So sánh với dữ liệu gốc (lưu trong data attributes)
+        const originalUsername = document.getElementById('edit-employee-username').getAttribute('data-original') || '';
+        const originalName = document.getElementById('edit-employee-name').getAttribute('data-original') || '';
+        const originalEmail = document.getElementById('edit-employee-email').getAttribute('data-original') || '';
+        const originalPhone = document.getElementById('edit-employee-phone').getAttribute('data-original') || '';
+        const originalPosition = document.getElementById('edit-employee-position').getAttribute('data-original') || '';
+        const originalStatus = document.getElementById('edit-employee-status').getAttribute('data-original') || 'true';
+        
+        hasData = (currentUsername !== originalUsername) || 
+                  (currentPassword !== '') || // Nếu có nhập mật khẩu mới
+                  (currentName !== originalName) || 
+                  (currentEmail !== originalEmail) || 
+                  (currentPhone !== originalPhone) || 
+                  (currentPosition !== originalPosition) || 
+                  (currentStatus !== originalStatus);
+    }
+    
+    return hasData;
+}
+
+// Hàm đóng modal chính - kiểm tra dữ liệu trước khi đóng
+function closeModal(modalId) {
+    // Cho phép đóng Add Customer không cần xác nhận sau khi lưu
+    if (modalId === 'addCustomerModal' && window.__suppressAddCustomerConfirm) {
+        window.__suppressAddCustomerConfirm = false;
+        document.getElementById(modalId).style.display = 'none';
+        return;
+    }
+    // Cho phép đóng Edit Customer không cần xác nhận sau khi cập nhật
+    if (modalId === 'editCustomerModal' && window.__suppressEditCustomerConfirm) {
+        window.__suppressEditCustomerConfirm = false;
+        document.getElementById(modalId).style.display = 'none';
+        return;
+    }
+    // Cho phép đóng Employee không cần xác nhận sau khi lưu/cập nhật
+    if (modalId === 'addEmployeeModal' && window.__suppressAddEmployeeConfirm) {
+        window.__suppressAddEmployeeConfirm = false;
+        document.getElementById(modalId).style.display = 'none';
+        return;
+    }
+    if (modalId === 'editEmployeeModal' && window.__suppressEditEmployeeConfirm) {
+        window.__suppressEditEmployeeConfirm = false;
+        document.getElementById(modalId).style.display = 'none';
+        return;
+    }
+    if (hasFormDataChanged(modalId)) {
+        // Có dữ liệu thay đổi -> hiển thị xác nhận
+        document.getElementById('confirmExitModal').style.display = 'block';
+        
+        // Gán sự kiện cho các nút
+        document.getElementById('confirmExitStayBtn').onclick = function() {
+            document.getElementById('confirmExitModal').style.display = 'none';
+        };
+        document.getElementById('confirmExitLeaveBtn').onclick = function() {
+            document.getElementById('confirmExitModal').style.display = 'none';
+            
+            // Xóa dữ liệu và đóng modal (cho edit và add customer)
+            if (modalId === 'editCustomerModal') {
+                document.getElementById('editCustomerForm').reset();
+                document.getElementById('editCustomerModal').style.display = 'none';
+            } else if (modalId === 'editEmployeeModal') {
+                document.getElementById('editEmployeeForm').reset();
+                document.getElementById('editEmployeeModal').style.display = 'none';
+            } else if (modalId === 'addCustomerModal') {
+                document.getElementById('addCustomerForm').reset();
+                document.getElementById('addCustomerModal').style.display = 'none';
+            } else if (modalId === 'addEmployeeModal') {
+                document.getElementById('addEmployeeForm').reset();
+                document.getElementById('addEmployeeModal').style.display = 'none';
+            }
+        };
+    } else {
+        // Không có dữ liệu thay đổi -> đóng ngay
+        document.getElementById(modalId).style.display = 'none';
+    }
+}
+
+
+
+      // Debug function để kiểm tra khung tài khoản
+      window.debugUserHeader = function() {
+        console.log('🔍 Debug User Account Header:');
+        console.log('  - Username element:', document.getElementById('username-display'));
+        console.log('  - Current username:', document.getElementById('username-display')?.textContent);
+        console.log('  - Session username:', '{{ session.get("username", "") }}');
+        console.log('  - Session user_id:', '{{ session.get("user_id", "") }}');
+        console.log('  - Is expanded:', document.querySelector('.user-account-header')?.classList.contains('expanded'));
+        console.log('  - Header element:', document.querySelector('.user-account-header'));
+        console.log('  - Session data:', {
+          username: '{{ session.get("username", "") }}',
+          user_id: '{{ session.get("user_id", "") }}'
+        });
+        
+        // Kiểm tra thêm
+        console.log('  - Template username check:', '{{ session.get("username") }}');
+        console.log('  - Template user_id check:', '{{ session.get("user_id") }}');
+        console.log('  - Template session exists:', '{{ session }}');
+        
+        // Gọi hàm kiểm tra session
+        console.log('🔄 Gọi checkSessionAndUpdate...');
+        checkSessionAndUpdate();
+      };
+
+      // Debug function để kiểm tra modal
+      window.debugModal = function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+          console.log(`🔍 Debug Modal: ${modalId}`);
+          console.log('  - Modal element:', modal);
+          console.log('  - Modal display:', modal.style.display);
+          console.log('  - Modal content:', modal.querySelector('.modal-content'));
+          console.log('  - Modal footer:', modal.querySelector('.modal-footer'));
+          console.log('  - Save button:', modal.querySelector('.btn-success'));
+          console.log('  - Cancel button:', modal.querySelector('.btn-cancel'));
+        } else {
+          console.error(`❌ Modal ${modalId} không tồn tại`);
+        }
+      };
+
+      // Gọi debug function khi cần thiết
+      if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+        console.log('🔧 Debug functions available:');
+        console.log('  - window.debugUserHeader() - Kiểm tra khung tài khoản');
+        console.log('  - window.forceRefreshUserInfo() - Force refresh thông tin người dùng');
+        console.log('  - window.refreshUserInfo() - Cập nhật thông tin người dùng');
+        console.log('  - window.debugModal("editEmployeeModal") - Kiểm tra modal edit nhân viên');
+        console.log('  - window.debugModal("editCustomerModal") - Kiểm tra modal edit khách hàng');
+        
+        // Tự động debug khi load trang
+        setTimeout(() => {
+          console.log('🔍 Auto-debug user header...');
+          window.debugUserHeader();
+        }, 1000);
+      }
+
+</script>
+{% endblock %}
+

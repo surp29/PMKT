@@ -1,0 +1,26 @@
+# Docker specific files
+.dockerignore
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Docker volumes
+volumes/
+data/
+
+# Docker logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

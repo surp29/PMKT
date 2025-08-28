@@ -1,0 +1,1486 @@
+{% extends "base.html" %}
+{% block title %}Báo cáo{% endblock %}
+{% block content %}
+
+<!-- Thêm Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<h2 class="page-title"><i class="fas fa-chart-line"></i> Báo cáo</h2>
+
+
+
+<!-- Tabs: styled like Khách hàng/Nhân viên -->
+<div class="tabs" style="margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+  <button class="tab-btn active" id="revenueTab" onclick="switchReportTab('revenue')" style="padding: 12px 24px; border: none; background: #007bff; color: white; cursor: pointer; border-radius: 5px 5px 0 0; margin-right: 5px;">Doanh thu</button>
+  <button class="tab-btn" id="debtTab" onclick="switchReportTab('debt')" style="padding: 12px 24px; border: none; background: white; color: #666; cursor: pointer; border-radius: 5px 5px 0 0;">Công nợ</button>
+</div>
+
+<!-- Revenue Report Section -->
+<div id="revenueSection">
+<div class="report-container" style="margin-top: 16px;">
+  <div class="report-left">
+    <!-- Biểu đồ cột -->
+    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; width: 100%; max-width: 800px;">
+    <div style="margin-bottom: 10px; text-align: center;">
+        <label style="font-weight: 600; color: #1565c0; font-size: 18px;">Báo cáo doanh thu theo sản phẩm</label>
+      </div>
+      <div style="width: 100%; height: 400px; position: relative;">
+        <canvas id="revenueChart" style="width: 100% !important; height: 100% !important;"></canvas>
+    </div>
+    </div>
+  </div>
+
+  <div class="report-right">
+    <h3><i class="fas fa-boxes"></i> Thống kê sản phẩm</h3>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-weight: bold; min-width: 120px;">Từ ngày</label>
+          <input type="date" id="fromDate" value="{{ revenue_data.data.summary.date_range.from_date if revenue_data and revenue_data.data and revenue_data.data.summary else '' }}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-weight: bold; min-width: 120px;">Đến ngày</label>
+          <input type="date" id="toDate" value="{{ revenue_data.data.summary.date_range.to_date if revenue_data and revenue_data.data and revenue_data.data.summary else '' }}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-weight: bold; min-width: 120px;">Số lượng đã bán</label>
+          <input type="text" id="soldQuantity" value="{{ revenue_data.data.summary.total_quantity_sold if revenue_data and revenue_data.data and revenue_data.data.summary else '0' }}" readonly style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-weight: bold; min-width: 120px;">Số lượng còn lại</label>
+          <input type="text" id="remainingQuantity" value="{{ revenue_data.data.summary.total_quantity_remaining if revenue_data and revenue_data.data and revenue_data.data.summary else '20' }}" readonly style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-weight: bold; min-width: 120px;">Doanh thu</label>
+          <input type="text" id="totalRevenue" value="{{ '{:,.0f}'.format(revenue_data.data.summary.total_revenue) if revenue_data and revenue_data.data and revenue_data.data.summary else '0' }} VND" readonly style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #f8f9fa;">
+        </div>
+        <div class="report-buttons" style="display: flex; gap: 12px; justify-content: center;">
+          <button onclick="printReport()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">In báo cáo</button>
+        </div>
+      </div>
+  </div>
+</div>
+
+  <!-- Bảng dữ liệu báo cáo doanh thu -->
+  <div class="data-table-container">
+    <h3>Dữ liệu báo cáo doanh thu</h3>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="text-align:center;">STT</th>
+          <th style="text-align:center;">Tên sp</th>
+          <th style="text-align:center;">Nhóm sp</th>
+          <th style="text-align:center;">Từ ngày</th>
+          <th style="text-align:center;">Đến ngày</th>
+          <th style="text-align:center;">Số lượng</th>
+          <th style="text-align:center;">Doanh thu</th>
+        </tr>
+      </thead>
+      <tbody id="reportDataTableBody">
+        {% if revenue_data and revenue_data.data and revenue_data.data.product_data %}
+          {% for product in revenue_data.data.product_data %}
+          <tr>
+            <td style="text-align:center;">{{ loop.index }}</td>
+            <td style="text-align:center;">{{ product.ten_san_pham }}</td>
+            <td style="text-align:center;">{{ product.nhom_san_pham }}</td>
+            <td style="text-align:center;">{{ product.tu_ngay }}</td>
+            <td style="text-align:center;">{{ product.den_ngay }}</td>
+            <td style="text-align:center;">{{ product.so_luong_ban }}</td>
+            <td style="text-align:center;">{{ '{:,.0f}'.format(product.doanh_thu) }} VND</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align:center; color:#888;">Chưa có dữ liệu</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Debt Report Section -->
+<div id="debtSection" style="display: none;">
+  <div class="filter-bar" style="display: flex; align-items: flex-end; gap: 15px; flex-wrap: wrap;">
+    <div class="filter-item">
+      <label>Tên KH</label>
+      <input type="text" id="customerName" placeholder="Nhập tên khách hàng">
+        </div>
+    <div class="filter-item">
+      <label>Trạng thái</label>
+      <select id="thanhToanFilter">
+        <option value="">Tất cả</option>
+        <option value="con_no">Đang nợ</option>
+        <option value="het_no">Hết nợ</option>
+      </select>
+    </div>
+    <button class="clear-btn" onclick="clearDebtFilter()" style="width: 120px; height: 38px; padding: 8px 16px; border: none; border-radius: 4px; background: #6c757d; color: white; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 0; align-self: center;"><i class="fas fa-times"></i> Xóa bộ lọc</button>
+  </div>
+
+  <div class="data-table-container">
+    <h3>Báo cáo công nợ</h3>
+    <table class="data-table">
+                        <thead>
+                    <tr>
+                      <th style="text-align:center; width: 200px;">Tên khách hàng</th>
+                      <th style="text-align:center; width: 150px;">Tổng công nợ</th>
+                      <th style="text-align:center; width: 150px;">Đã thanh toán</th>
+                                              <th style="text-align:center; width: 150px;">Đang nợ</th>
+                      <th style="text-align:center; width: 120px;">Trạng thái</th>
+                      <th style="text-align:center; width: 120px;">Hành động</th>
+          </tr>
+        </thead>
+      <tbody>
+          <tr>
+          <td colspan="6" style="text-align:center; color:#888;">Chưa có dữ liệu</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<!-- Modal sửa trạng thái công nợ -->
+<div id="edit-debt-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:rgba(0,0,0,.5); align-items:center; justify-content:center;">
+  <div class="modal-content" style="max-width:600px;">
+    <div class="modal-header" style="justify-content:center; background: linear-gradient(135deg, #007bff, #0056b3);">
+      <h3 style="margin:0; color:white;">Cập nhật trạng thái công nợ</h3>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <div style="margin-bottom: 15px;">
+        <strong>Khách hàng:</strong> <span id="edit-debt-customer-name"></span>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <strong>Tổng công nợ:</strong> <span id="edit-debt-total"></span>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <strong>Đã thanh toán:</strong> <span id="edit-debt-paid"></span>
+      </div>
+      <div style="margin-bottom: 15px;">
+                                <strong>Đang nợ:</strong> <span id="edit-debt-remaining"></span>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label><strong>Đã thanh toán:</strong></label>
+        <input type="text" id="edit-debt-paid-amount" placeholder="Nhập số tiền đã thanh toán (để trống nếu chưa thanh toán)" style="width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+      </div>
+    </div>
+    <div class="modal-footer" style="padding: 15px 20px; text-align:center; border-top:1px solid #eee;">
+      <button onclick="saveDebtChanges()" style="background:#28a745; color:white; padding:8px 16px; border:none; border-radius:4px; cursor:pointer; margin-right:10px;">Lưu</button>
+      <button onclick="closeEditDebtModal()" style="background:#6c757d; color:white; padding:8px 16px; border:none; border-radius:4px; cursor:pointer;">Hủy</button>
+    </div>
+    </div>
+  </div>
+
+  <script>
+function switchReportTab(tab) {
+    const revenueBtn = document.getElementById('revenueTab');
+    const debtBtn = document.getElementById('debtTab');
+    const revenueSection = document.getElementById('revenueSection');
+    const debtSection = document.getElementById('debtSection');
+    if (tab === 'revenue') {
+        revenueBtn.classList.add('active');
+        revenueBtn.style.background = '#007bff';
+        revenueBtn.style.color = '#fff';
+        debtBtn.classList.remove('active');
+        debtBtn.style.background = 'white';
+        debtBtn.style.color = '#666';
+        revenueSection.style.display = 'block';
+        debtSection.style.display = 'none';
+    } else if (tab === 'debt') {
+        debtBtn.classList.add('active');
+        debtBtn.style.background = '#007bff';
+        debtBtn.style.color = '#fff';
+        revenueBtn.classList.remove('active');
+        revenueBtn.style.background = 'white';
+        revenueBtn.style.color = '#666';
+        revenueSection.style.display = 'none';
+        debtSection.style.display = 'block';
+        // Load dữ liệu công nợ khi chuyển sang tab này
+        loadDebtReport();
+    }
+}
+
+// Hàm tạo báo cáo
+async function generateReport() {
+    console.log('generateReport() called');
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    
+    console.log('Dates:', fromDate, toDate);
+    
+    if (!fromDate || !toDate) {
+        showErrorPopup('Vui lòng chọn khoảng thời gian!');
+        return;
+    }
+    
+    if (new Date(toDate) < new Date(fromDate)) {
+        showErrorPopup('Ngày kết thúc phải lớn hơn ngày bắt đầu!');
+        return;
+    }
+    
+    const daysDiff = Math.ceil((new Date(toDate) - new Date(fromDate)) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 31) {
+        showErrorPopup('Khoảng thời gian tối đa là 31 ngày!');
+        return;
+      }
+
+    try {
+        const url = `{{ BACKEND_URL }}/api/reports/revenue-by-date?from_date=${fromDate}&to_date=${toDate}`;
+        console.log('Fetching from:', url);
+        
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) {
+            renderChart(data.data);
+            updateSummaryFields(data.data.summary);
+            renderReportTable(data.data); // Render bảng dữ liệu
+  } else {
+            showErrorPopup('Lỗi: ' + (data.detail || 'Không thể tạo báo cáo'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showErrorPopup('Lỗi khi tạo báo cáo!');
+    }
+}
+
+// Hàm render bảng báo cáo (giữ lại để tương thích)
+function renderReportTable(reportData) {
+    const tableBody = document.getElementById('reportDataTableBody');
+    
+    // Xóa các dòng cũ
+    tableBody.innerHTML = '';
+    
+    // Kiểm tra nếu không có dữ liệu sản phẩm
+    if (!reportData.product_data || reportData.product_data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">Chưa có dữ liệu</td></tr>';
+        return;
+    }
+    
+    // Thêm các dòng mới cho từng sản phẩm
+    reportData.product_data.forEach((product, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="text-align:center;">${index + 1}</td>
+            <td style="text-align:center;">${product.ten_san_pham}</td>
+            <td style="text-align:center;">${product.nhom_san_pham}</td>
+            <td style="text-align:center;">${product.tu_ngay}</td>
+            <td style="text-align:center;">${product.den_ngay}</td>
+            <td style="text-align:center;">${product.so_luong_ban}</td>
+                            <td style="text-align:center;">${product.doanh_thu.toLocaleString('en-US')} VND</td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+// Hàm cập nhật các trường tổng
+function updateSummaryFields(summary) {
+            document.getElementById('soldQuantity').value = summary.total_quantity_sold.toLocaleString('en-US');
+        document.getElementById('remainingQuantity').value = summary.total_quantity_remaining.toLocaleString('en-US');
+        document.getElementById('totalRevenue').value = summary.total_revenue.toLocaleString('en-US') + ' VND';
+}
+
+// Hàm render biểu đồ cột
+let currentChart = null;
+
+// Hàm load dữ liệu từ backend và vẽ biểu đồ
+async function loadRevenueData() {
+    try {
+        const fromDate = document.getElementById('fromDate').value;
+        const toDate = document.getElementById('toDate').value;
+        
+
+        console.log('🔄 loadRevenueData called with dates:', fromDate, 'to', toDate);
+        
+        if (!fromDate || !toDate) {
+            console.log('⚠️ Chưa chọn ngày, sử dụng ngày hôm nay');
+            return;
+        }
+        
+        // Kiểm tra xem có cần load dữ liệu không
+        const currentSoldQuantity = document.getElementById('soldQuantity').value;
+        const currentTotalRevenue = document.getElementById('totalRevenue').value;
+        
+        // Nếu đã có dữ liệu và ngày không thay đổi, không cần load lại
+        if (currentSoldQuantity !== '0' && currentTotalRevenue !== '0 VND') {
+            console.log('✅ Data already exists, checking if dates changed...');
+            
+            // Chỉ load lại nếu ngày thay đổi
+            const fromDateInput = document.getElementById('fromDate');
+            const toDateInput = document.getElementById('toDate');
+            
+            if (fromDateInput.dataset.lastFromDate === fromDate && 
+                toDateInput.dataset.lastToDate === toDate) {
+                console.log('📅 Dates unchanged, skipping API call');
+                return;
+            }
+        }
+        
+        console.log('🌐 Fetching from backend:', `{{ BACKEND_URL }}/api/reports/revenue-by-date?from_date=${fromDate}&to_date=${toDate}`);
+        
+        const response = await fetch(`{{ BACKEND_URL }}/api/reports/revenue-by-date?from_date=${fromDate}&to_date=${toDate}`);
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response headers:', response.headers);
+        
+        const data = await response.json();
+        console.log('📊 Revenue data received:', data);
+        
+        if (data.success && data.data) {
+            console.log('✅ Data loaded successfully, updating UI...');
+            
+            // Cập nhật các trường thống kê
+            const soldQuantity = data.data.summary.total_quantity_sold || '0';
+            const remainingQuantity = data.data.summary.total_quantity_remaining || '0';
+            const totalRevenue = data.data.summary.total_revenue || 0;
+            
+            console.log('📈 Summary data:', { soldQuantity, remainingQuantity, totalRevenue });
+            
+            document.getElementById('soldQuantity').value = soldQuantity;
+            document.getElementById('remainingQuantity').value = remainingQuantity;
+            document.getElementById('totalRevenue').value = `${totalRevenue.toLocaleString()} VND`;
+            
+            // Lưu ngày hiện tại để so sánh lần sau
+            document.getElementById('fromDate').dataset.lastFromDate = fromDate;
+            document.getElementById('toDate').dataset.lastToDate = toDate;
+            
+            // Vẽ biểu đồ
+            console.log('🎨 Rendering chart...');
+            renderChart(data.data);
+            
+            // Cập nhật bảng dữ liệu
+            console.log('📋 Updating report table...');
+            updateReportTable(data.data.product_data || []);
+            
+            console.log('✅ UI updated successfully');
+        } else {
+            console.error('❌ Failed to load revenue data:', data);
+        }
+    } catch (error) {
+        console.error('💥 Error loading revenue data:', error);
+    }
+}
+
+// Hàm lấy dữ liệu biểu đồ từ backend (template)
+function getChartDataFromBackend() {
+    // Kiểm tra xem có dữ liệu từ backend không
+    const soldQuantity = document.getElementById('soldQuantity').value;
+    const totalRevenue = document.getElementById('totalRevenue').value;
+    
+    if (soldQuantity === '0' && totalRevenue === '0 VND') {
+        return null;
+    }
+    
+    // Tạo dữ liệu biểu đồ từ dữ liệu hiện tại
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    
+    // Parse dates
+    const startDate = new Date(fromDate);
+    const endDate = new Date(toDate);
+    
+    // Tạo array ngày
+    const dates = [];
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+        dates.push(currentDate.toISOString().split('T')[0]);
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Tạo dữ liệu biểu đồ
+    const columns = dates.map(date => {
+        const dateStr = new Date(date).toLocaleDateString('vi-VN');
+        return {
+            date: dateStr,
+            date_key: date,
+            revenue: 0, // Sẽ được cập nhật nếu có dữ liệu chi tiết
+            quantity_sold: 0,
+            quantity_remaining: parseInt(document.getElementById('remainingQuantity').value) || 0
+        };
+    });
+    
+    // Nếu có dữ liệu, cập nhật ngày có doanh thu
+    if (parseInt(soldQuantity) > 0) {
+        // Giả sử doanh thu tập trung vào ngày cuối
+        const lastColumn = columns[columns.length - 1];
+        lastColumn.revenue = parseFloat(totalRevenue.replace(/[^0-9]/g, '')) || 0;
+        lastColumn.quantity_sold = parseInt(soldQuantity) || 0;
+    }
+    
+    return {
+        columns: columns,
+        product_data: [] // Sẽ được cập nhật nếu có dữ liệu chi tiết
+    };
+}
+
+// Hàm cập nhật bảng dữ liệu
+function updateReportTable(productData) {
+    const tbody = document.getElementById('reportDataTableBody');
+    
+    if (!productData || productData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">Chưa có dữ liệu</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    productData.forEach((product, index) => {
+        html += `
+            <tr>
+                <td style="text-align:center;">${index + 1}</td>
+                <td style="text-align:center;">${product.ten_san_pham || ''}</td>
+                <td style="text-align:center;">${product.nhom_san_pham || ''}</td>
+                <td style="text-align:center;">${product.tu_ngay || ''}</td>
+                <td style="text-align:center;">${product.den_ngay || ''}</td>
+                <td style="text-align:center;">${product.so_luong_ban || 0}</td>
+                <td style="text-align:center;">${(product.doanh_thu || 0).toLocaleString()} VND</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// Event listeners cho date inputs
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM Content Loaded - Reports page');
+    
+    // Lưu dữ liệu từ backend vào biến global
+    window.revenueDataFromBackend = null;
+    console.log('💾 Backend data variable initialized');
+    
+    // Kiểm tra xem có dữ liệu từ backend không
+    const fromDateInput = document.getElementById('fromDate');
+    const toDateInput = document.getElementById('toDate');
+    
+    console.log('📅 From date input value:', fromDateInput.value);
+    console.log('📅 To date input value:', toDateInput.value);
+    
+    // Nếu không có giá trị từ backend, set ngày mặc định
+    if (!fromDateInput.value) {
+        const today = new Date().toISOString().split('T')[0];
+        fromDateInput.value = today;
+        toDateInput.value = today;
+        console.log('📅 Set default dates:', today);
+    }
+    
+    // Chỉ load dữ liệu từ API nếu không có dữ liệu từ backend
+    const soldQuantity = document.getElementById('soldQuantity').value;
+    const totalRevenue = document.getElementById('totalRevenue').value;
+    
+    if (soldQuantity === '0' && totalRevenue === '0 VND') {
+        console.log('🔄 No data from backend, loading from API...');
+        loadRevenueData();
+    } else {
+        console.log('✅ Data already loaded from backend, skipping API call');
+        // Vẽ biểu đồ với dữ liệu từ backend nếu có
+        const chartData = getChartDataFromBackend();
+        if (chartData) {
+            renderChart(chartData);
+        }
+        
+        // Nếu có dữ liệu từ backend, cập nhật bảng dữ liệu
+        if (window.revenueDataFromBackend && window.revenueDataFromBackend.data && window.revenueDataFromBackend.data.product_data) {
+            updateReportTable(window.revenueDataFromBackend.data.product_data);
+        }
+    }
+    
+    // Event listeners cho date changes
+    fromDateInput.addEventListener('change', loadRevenueData);
+    toDateInput.addEventListener('change', loadRevenueData);
+    
+    console.log('✅ Event listeners attached');
+});
+
+function renderChart(reportData) {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    // Hủy biểu đồ cũ nếu có
+    if (currentChart) {
+        currentChart.destroy();
+    }
+    
+    // Tạo dữ liệu cho biểu đồ từ reportData.columns
+    const chartData = {
+        labels: reportData.columns.map(col => col.date),
+        revenue: reportData.columns.map(col => col.revenue),
+        quantitySold: reportData.columns.map(col => col.quantity_sold),
+        quantityRemaining: reportData.columns.map(col => col.quantity_remaining)
+    };
+    
+    currentChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+            labels: chartData.labels,
+      datasets: [{
+                label: 'Doanh thu (VND)',
+                data: chartData.revenue,
+                backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Số lượng đã bán',
+                data: chartData.quantitySold,
+                backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                borderColor: 'rgba(40, 167, 69, 1)',
+                borderWidth: 1,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Ngày'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Doanh thu (VND)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Số lượng'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Math.round(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Biểu đồ doanh thu và số lượng theo ngày',
+                    font: {
+                        size: 16
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Hàm in báo cáo
+function printReport() {
+    const reportTable = document.querySelector('.data-table');
+    if (!reportTable || reportTable.rows.length <= 1) {
+        showErrorPopup('Vui lòng tạo báo cáo trước khi in!');
+        return;
+    }
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+        <head>
+            <title>Báo cáo doanh thu</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+                th { background-color: #007bff; color: white; }
+                .summary { margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+            </style>
+        </head>
+        <body>
+            <h2>Báo cáo doanh thu theo sản phẩm</h2>
+            <div class="summary">
+                <p><strong>Từ ngày:</strong> ${document.getElementById('fromDate').value}</p>
+                <p><strong>Đến ngày:</strong> ${document.getElementById('toDate').value}</p>
+                <p><strong>Tổng số lượng đã bán:</strong> ${document.getElementById('soldQuantity').value}</p>
+                <p><strong>Số lượng còn lại:</strong> ${document.getElementById('remainingQuantity').value}</p>
+                <p><strong>Tổng doanh thu:</strong> ${document.getElementById('totalRevenue').value}</p>
+            </div>
+            ${reportTable.outerHTML}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// Load dữ liệu công nợ từ API
+async function loadDebtReport() {
+    try {
+        // Lấy ngày hiện tại
+        const today = new Date();
+        const fromDate = today.toISOString().split('T')[0];
+        const toDate = today.toISOString().split('T')[0];
+        
+        // Sử dụng API mới với bảng debts
+        const response = await fetch(`{{ BACKEND_URL }}/api/reports/debt-by-date?from_date=${fromDate}&to_date=${toDate}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderDebtTable(data.data);
+        } else {
+            console.error('Lỗi khi tải báo cáo công nợ:', data.detail);
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải báo cáo công nợ:', error);
+    }
+}
+
+// Render bảng công nợ
+function renderDebtTable(debtData) {
+    const tbody = document.querySelector('#debtSection tbody');
+    
+    if (!debtData || debtData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">Chưa có dữ liệu</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    debtData.forEach((item, index) => {
+        // Tính toán số tiền hiển thị trong cột "Đã thanh toán"
+        // Chỉ hiển thị tối đa bằng tổng nợ, không vượt quá
+        const displayPaidAmount = Math.min(parseFloat(item.paid_amount), parseFloat(item.total_debt));
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="text-align:center;">${item.customer_name}</td>
+            <td style="text-align:center;">${parseFloat(item.total_debt).toLocaleString('en-US')} VND</td>
+            <td style="text-align:center;">${displayPaidAmount.toLocaleString('en-US')} VND</td>
+            <td style="text-align:center;">${parseFloat(item.remaining_debt).toLocaleString('en-US')} VND</td>
+            <td style="text-align:center;">
+                <span style="color: ${item.remaining_debt > 0 ? '#dc3545' : '#28a745'}; font-weight: bold;">
+                    ${item.remaining_debt > 0 ? 'Đang nợ' : 'Hết nợ'}
+                </span>
+            </td>
+            <td style="text-align:center;">
+                <button onclick="editDebtStatus('${item.customer_name}')" style="background: #007bff; color: white; padding: 4px 8px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-edit"></i> Sửa
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function autoSearchDebt() {
+    const customerName = document.getElementById('customerName').value.toLowerCase();
+    const thanhToanFilter = document.getElementById('thanhToanFilter').value;
+    const rows = document.querySelectorAll('#debtSection tbody tr');
+    rows.forEach(row => {
+        const name = row.cells[0].textContent.toLowerCase();
+        const status = row.cells[4].textContent.toLowerCase();
+        const nameMatch = !customerName || name.includes(customerName);
+        let thanhToanMatch = true;
+        if (thanhToanFilter === 'con_no') {
+            thanhToanMatch = parseFloat(row.cells[3].textContent.replace(/[^0-9]/g, '')) > 0;
+        } else if (thanhToanFilter === 'het_no') {
+            thanhToanMatch = parseFloat(row.cells[3].textContent.replace(/[^0-9]/g, '')) === 0;
+        }
+        row.style.display = (nameMatch && thanhToanMatch) ? '' : 'none';
+    });
+}
+
+// Sửa trạng thái công nợ của khách hàng
+function editDebtStatus(customerName) {
+    // Mở modal để cập nhật trạng thái thanh toán
+    openEditDebtModal(customerName);
+}
+
+function clearDebtFilter() {
+    document.getElementById('customerName').value = '';
+    document.getElementById('thanhToanFilter').value = '';
+    const rows = document.querySelectorAll('#debtSection tbody tr');
+    rows.forEach(row => { row.style.display = ''; });
+}
+
+// Mở modal sửa trạng thái công nợ
+function openEditDebtModal(customerName) {
+    // Tìm dữ liệu của khách hàng này
+    const rows = document.querySelectorAll('#debtSection tbody tr');
+    let customerData = null;
+    
+    rows.forEach(row => {
+        if (row.cells[0].textContent === customerName) {
+            customerData = {
+                customer_name: row.cells[0].textContent,
+                total_debt: parseFloat(row.cells[1].textContent.replace(/[^0-9]/g, '')),
+                paid_amount: parseFloat(row.cells[2].textContent.replace(/[^0-9]/g, '')),
+                remaining_debt: parseFloat(row.cells[3].textContent.replace(/[^0-9]/g, ''))
+            };
+        }
+    });
+    
+    if (customerData) {
+        // Điền thông tin vào modal
+        document.getElementById('edit-debt-customer-name').textContent = customerData.customer_name;
+        document.getElementById('edit-debt-total').textContent = customerData.total_debt.toLocaleString('en-US') + ' VND';
+        
+        // Hiển thị số tiền đã thanh toán (tối đa bằng tổng nợ)
+        const displayPaidAmount = Math.min(customerData.paid_amount, customerData.total_debt);
+        document.getElementById('edit-debt-paid').textContent = displayPaidAmount.toLocaleString('en-US') + ' VND';
+        
+        document.getElementById('edit-debt-remaining').textContent = customerData.remaining_debt.toLocaleString('en-US') + ' VND';
+        
+        // Để trống input "Đã thanh toán" để người dùng nhập số tiền mới
+        document.getElementById('edit-debt-paid-amount').value = '';
+        
+        // Hiển thị modal
+        document.getElementById('edit-debt-modal').style.display = 'flex';
+        
+        // Không cần lưu dữ liệu ban đầu vì input sẽ trống
+        window.originalEditDebtData = {
+            paid_amount: 0
+        };
+        
+        // Lưu dữ liệu để sử dụng khi lưu
+        window.currentEditDebtData = customerData;
+        
+        // Đánh dấu rằng modal đã được mở với dữ liệu
+        window.modalHasData = true;
+        
+        // Gắn event listener cho input "Đã thanh toán" sau khi có dữ liệu
+        setupPaidAmountInputListener();
+    }
+}
+
+// Đóng modal sửa trạng thái công nợ
+function closeEditDebtModal() {
+    // Kiểm tra xem có dữ liệu trong input không
+    const inputValue = document.getElementById('edit-debt-paid-amount').value.replace(/[^\d]/g, '');
+    const currentPaidAmount = parseInt(inputValue) || 0;
+    
+    // Nếu có nhập số tiền (khác 0), hiển thị xác nhận
+    if (currentPaidAmount > 0) {
+        // Dùng popup xác nhận tiêu chuẩn thay cho confirm()
+        showConfirmationPopup(
+            'Xác nhận',
+            'Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?',
+            () => {
+                document.getElementById('edit-debt-modal').style.display = 'none';
+                resetEditDebtModal();
+            },
+            () => { /* Cancel: không làm gì */ }
+        );
+    } else {
+        // Không có thay đổi, thoát luôn
+        document.getElementById('edit-debt-modal').style.display = 'none';
+        resetEditDebtModal();
+    }
+}
+
+// Reset modal về trạng thái ban đầu
+function resetEditDebtModal() {
+    document.getElementById('edit-debt-paid-amount').value = '';
+    window.originalEditDebtData = null;
+    window.currentEditDebtData = null;
+    window.modalHasData = false;
+    
+    // Xóa thông báo validation
+    const validationMessage = document.getElementById('validation-message');
+    if (validationMessage) {
+        validationMessage.remove();
+    }
+}
+
+// Xử lý click bên ngoài modal để đóng
+document.addEventListener('DOMContentLoaded', function() {
+    const editDebtModal = document.getElementById('edit-debt-modal');
+    if (editDebtModal) {
+        editDebtModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeEditDebtModal();
+            }
+        });
+    }
+    
+            // Xử lý input "Đã thanh toán" - chỉ cho phép nhập số nguyên và tự động format dấu phẩy
+    const paidAmountInput = document.getElementById('edit-debt-paid-amount');
+    if (paidAmountInput) {
+            // Debug: log thông tin để kiểm tra
+            console.log('Debug - currentEditDebtData:', window.currentEditDebtData);
+            console.log('Debug - total_debt value:', window.currentEditDebtData ? window.currentEditDebtData.total_debt : 'undefined');
+        // Gộp tất cả logic vào một event listener input
+        paidAmountInput.addEventListener('input', function(e) {
+            // Lấy giá trị hiện tại và loại bỏ dấu phẩy
+            let value = this.value.replace(/[^\d]/g, '');
+            
+            // Chỉ format lại dấu phẩy khi user đã nhập xong (không phải khi đang nhập)
+            if (value && value.length > 3) {
+                const numericValue = parseInt(value);
+                this.value = numericValue.toLocaleString('en-US');
+            }
+            
+            // Hiển thị thông báo validation real-time
+            const currentAmount = parseInt(value) || 0;
+            const totalDebt = window.currentEditDebtData ? window.currentEditDebtData.total_debt : 0;
+            
+            // Tạo hoặc cập nhật thông báo validation
+            let validationMessage = document.getElementById('validation-message');
+            if (!validationMessage) {
+                validationMessage = document.createElement('div');
+                validationMessage.id = 'validation-message';
+                validationMessage.style.cssText = 'margin-top: 5px; font-size: 12px; padding: 5px; border-radius: 3px;';
+                this.parentNode.appendChild(validationMessage);
+            }
+            
+            // Kiểm tra totalDebt có hợp lệ không
+            if (!totalDebt || isNaN(totalDebt) || totalDebt <= 0) {
+                validationMessage.innerHTML = `❌ Lỗi: Không thể lấy thông tin tổng nợ`;
+                validationMessage.style.backgroundColor = '#f8d7da';
+                validationMessage.style.color = '#721c24';
+                validationMessage.style.border = '1px solid #f5c6cb';
+                return;
+            }
+            
+            // Tính toán tổng số tiền đã thanh toán sau khi nhập (đã trả trước đó + vừa nhập)
+            const previouslyPaidAmount = window.currentEditDebtData ? window.currentEditDebtData.paid_amount : 0;
+            const totalPaidAfterInput = previouslyPaidAmount + currentAmount;
+            
+            // Tính số tiền còn nợ sau khi nhập
+            const remainingDebtAfterInput = totalDebt - totalPaidAfterInput;
+            
+            if (totalPaidAfterInput > totalDebt) {
+                // Vượt quá tổng công nợ → Tiền thừa
+                const excessAmount = totalPaidAfterInput - totalDebt;
+                validationMessage.innerHTML = `💰 Tiền thừa: <strong>${excessAmount.toLocaleString('en-US')} VND</strong><br>💳 Đang nợ: <strong>0 VND</strong>`;
+                validationMessage.style.backgroundColor = '#fff3cd';
+                validationMessage.style.color = '#856404';
+                validationMessage.style.border = '1px solid #ffeaa7';
+            } else if (totalPaidAfterInput === totalDebt) {
+                // Thanh toán đủ → Hết nợ
+                validationMessage.innerHTML = `✅ Thanh toán đủ! Khách hàng sẽ hết nợ<br>💳 Đang nợ: <strong>0 VND</strong>`;
+                validationMessage.style.backgroundColor = '#d4edda';
+                validationMessage.style.color = '#155724';
+                validationMessage.style.border = '1px solid #c3e6cb';
+            } else if (currentAmount > 0) {
+                // Chưa thanh toán đủ → Còn nợ
+                validationMessage.innerHTML = `💳 Đang nợ: <strong>${remainingDebtAfterInput.toLocaleString('en-US')} VND</strong>`;
+                validationMessage.style.backgroundColor = '#e2e3e5';
+                validationMessage.style.color = '#383d41';
+                validationMessage.style.border = '1px solid #d6d8db';
+            } else {
+                validationMessage.innerHTML = '';
+            }
+        });
+        
+        // Xử lý khi focus vào input - KHÔNG làm gì, giữ nguyên dấu phẩy
+        paidAmountInput.addEventListener('focus', function() {
+            // Không làm gì khi focus, giữ nguyên giá trị hiện tại với dấu phẩy
+        });
+        
+        // Xử lý khi blur khỏi input - format lại với dấu phẩy
+        paidAmountInput.addEventListener('blur', function() {
+            const value = this.value.replace(/[^\d]/g, '');
+            if (value) {
+                const numericValue = parseInt(value);
+                this.value = numericValue.toLocaleString('en-US');
+            }
+            // Không xóa giá trị nếu user chưa nhập gì
+        });
+        
+        // Ngăn chặn nhập ký tự không phải số
+        paidAmountInput.addEventListener('keypress', function(e) {
+            // Chỉ cho phép số và một số phím điều hướng
+            const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
+                               'Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+            
+            if (!allowedKeys.includes(e.key) && !/^\d$/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+        
+        // Thêm maxlength để đảm bảo có thể nhập số dài
+        paidAmountInput.setAttribute('maxlength', '20');
+        
+        // Thêm pattern để chỉ cho phép số và dấu phẩy
+        paidAmountInput.setAttribute('pattern', '[0-9,]*');
+    }
+});
+
+// Lưu thay đổi công nợ
+async function saveDebtChanges() {
+    // Lấy giá trị từ input và loại bỏ dấu phẩy để parse thành số
+    const inputValue = document.getElementById('edit-debt-paid-amount').value.replace(/[^\d]/g, '');
+    const newPaidAmount = parseInt(inputValue) || 0;
+    const originalPaidAmount = window.originalEditDebtData ? window.originalEditDebtData.paid_amount : 0;
+    const totalDebt = window.currentEditDebtData.total_debt;
+    const customerName = window.currentEditDebtData.customer_name;
+    
+    if (newPaidAmount < 0) {
+        showErrorPopup('Số tiền đã thanh toán không thể âm!');
+        return;
+    }
+    
+    // Xử lý logic cập nhật
+    if (newPaidAmount === originalPaidAmount) {
+        showErrorPopup('Không có thay đổi nào!');
+        return;
+    }
+    
+    // Tính tổng số tiền đã thanh toán sau khi nhập (đã trả trước đó + vừa nhập)
+    const previouslyPaidAmount = window.currentEditDebtData ? window.currentEditDebtData.paid_amount : 0;
+    const totalPaidAfterInput = previouslyPaidAmount + newPaidAmount;
+    
+    // Kiểm tra nếu tổng số tiền đã thanh toán vượt quá tổng công nợ
+    if (totalPaidAfterInput > totalDebt) {
+        const excessAmount = totalPaidAfterInput - totalDebt;
+        
+        // Hiển thị popup xác nhận tùy chỉnh thay vì confirm()
+        showConfirmationPopup(
+            'Xác nhận thanh toán vượt mức',
+            `Tổng số tiền đã thanh toán (${totalPaidAfterInput.toLocaleString('en-US')} VND) vượt quá tổng công nợ (${totalDebt.toLocaleString('en-US')} VND).`,
+            `Cần thối lại: ${excessAmount.toLocaleString('en-US')} VND`,
+            async () => {
+                // Callback khi user xác nhận - thực hiện lưu dữ liệu
+                await saveDebtDataToBackend(newPaidAmount, customerName, totalDebt, excessAmount);
+            },
+            () => {
+                // Callback khi user hủy - không làm gì
+                console.log('User cancelled excess payment confirmation');
+            }
+        );
+        return; // Dừng hàm ở đây, chờ user xác nhận
+    }
+    
+    // Nếu không vượt quá, lưu trực tiếp
+    await saveDebtDataToBackend(newPaidAmount, customerName, totalDebt, 0);
+}
+
+// Hàm lưu dữ liệu công nợ vào backend
+async function saveDebtDataToBackend(newPaidAmount, customerName, totalDebt, excessAmount = 0) {
+    try {
+        // Gọi API để cập nhật trạng thái thanh toán
+        const response = await fetch(`{{ BACKEND_URL }}/api/reports/payment-status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+                    body: JSON.stringify({
+            customer_name: customerName,
+            paid_amount: newPaidAmount + (window.currentEditDebtData ? window.currentEditDebtData.paid_amount : 0)
+        })
+        });
+        
+        const result = await response.json();
+        console.log('Backend response:', result); // Debug log
+        
+        if (result.success) {
+            // Lấy dữ liệu từ result.data
+            const remainingDebt = result.data && result.data.remaining_debt !== undefined ? result.data.remaining_debt : 0;
+            console.log('Remaining debt:', remainingDebt); // Debug log
+            
+            if (excessAmount > 0) {
+                // Hiển thị popup thành công khi vượt quá
+                showSuccessMessage(
+                    'Cập nhật công nợ thành công',
+                    `💰 Số tiền thanh toán: ${newPaidAmount.toLocaleString('en-US')} VND`,
+                    `💸 Cần thối lại: ${excessAmount.toLocaleString('en-US')} VND`,
+                    `💳 Đang nợ: 0 VND`,
+                    `✅ Trạng thái: Hết nợ`
+                );
+            } else if (remainingDebt === 0) {
+                // Hiển thị popup thành công khi thanh toán đủ
+                showSuccessMessage(
+                    'Cập nhật công nợ thành công',
+                    `💰 Số tiền thanh toán: ${newPaidAmount.toLocaleString('en-US')} VND`,
+                    `💳 Đang nợ: 0 VND`,
+                    `✅ Trạng thái: Hết nợ`
+                );
+            } else {
+                // Hiển thị popup thành công khi còn nợ
+                showSuccessMessage(
+                    'Cập nhật công nợ thành công',
+                    `💰 Số tiền thanh toán: ${newPaidAmount.toLocaleString('en-US')} VND`,
+                    `💳 Đang nợ: ${remainingDebt.toLocaleString('en-US')} VND`,
+                    `📊 Trạng thái: Còn nợ`
+                );
+            }
+            
+            document.getElementById('edit-debt-modal').style.display = 'none';
+            resetEditDebtModal();
+            
+            // Chuyển về tab Công nợ và reload dữ liệu
+            switchReportTab('debt');
+            setTimeout(() => {
+                loadDebtReport();
+            }, 100);
+        } else {
+            showErrorPopup('Lỗi: ' + (result.detail || 'Không thể cập nhật trạng thái thanh toán'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showErrorPopup('Lỗi khi cập nhật trạng thái thanh toán!');
+    }
+}
+
+// Function to get today's date in YYYY-MM-DD format
+function getTodayDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Auto search listeners
+document.addEventListener('DOMContentLoaded', function(){
+  console.log('DOMContentLoaded triggered');
+  
+  // Set default dates to today (real time) - PRIORITY 1
+  function setDefaultDates() {
+    try {
+      const todayStr = getTodayDateString();
+      
+      console.log('Setting default dates:', todayStr);
+      
+      const fromDateInput = document.getElementById('fromDate');
+      const toDateInput = document.getElementById('toDate');
+      
+      if (fromDateInput && toDateInput) {
+        fromDateInput.value = todayStr;
+        toDateInput.value = todayStr;
+        console.log('✅ Default dates set successfully');
+        return true;
+      } else {
+        console.error('❌ Date input elements not found');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error setting default dates:', error);
+      return false;
+    }
+  }
+  
+  // Initialize page
+  function initializePage() {
+    // Set default dates first
+    const datesSet = setDefaultDates();
+    
+    // Set up event listeners
+  document.getElementById('customerName').addEventListener('input', autoSearchDebt);
+  document.getElementById('thanhToanFilter').addEventListener('change', autoSearchDebt);
+    
+    // Switch to revenue tab
+  switchReportTab('revenue');
+  
+    // Auto generate report if dates were set successfully
+    if (datesSet) {
+  console.log('Calling generateReport()');
+      setTimeout(() => {
+  generateReport();
+      }, 100); // Small delay to ensure DOM is ready
+    }
+  
+  // Add event listeners for date changes to auto-update summary fields
+    const fromDateInput = document.getElementById('fromDate');
+    const toDateInput = document.getElementById('toDate');
+    
+    if (fromDateInput) {
+      fromDateInput.addEventListener('change', function() {
+        console.log('From date changed to:', this.value);
+    if (document.getElementById('toDate').value) {
+      generateReport();
+    }
+  });
+    }
+  
+    if (toDateInput) {
+      toDateInput.addEventListener('change', function() {
+        console.log('To date changed to:', this.value);
+    if (document.getElementById('fromDate').value) {
+      generateReport();
+    }
+  });
+    }
+  }
+  
+  // Initialize the page
+  initializePage();
+  
+  // Fallback: Try to set dates again after a short delay
+  setTimeout(() => {
+    const fromDateInput = document.getElementById('fromDate');
+    const toDateInput = document.getElementById('toDate');
+    
+    if (fromDateInput && !fromDateInput.value) {
+      const todayStr = getTodayDateString();
+      fromDateInput.value = todayStr;
+      console.log('🔄 Fallback: Set fromDate to', todayStr);
+    }
+    
+    if (toDateInput && !toDateInput.value) {
+      const todayStr = getTodayDateString();
+      toDateInput.value = todayStr;
+      console.log('🔄 Fallback: Set toDate to', todayStr);
+    }
+  }, 500);
+});
+
+// Hàm hiển thị popup thành công
+function showSuccessMessage(title, ...details) {
+    // Tạo popup container
+    const popup = document.createElement('div');
+    popup.id = 'success-popup';
+    popup.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    
+    // Tạo popup content
+    const popupContent = document.createElement('div');
+    popupContent.style.cssText = `
+        background: #fff;
+        border-radius: 10px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Tạo tiêu đề
+    const titleElement = document.createElement('h3');
+    titleElement.textContent = title;
+    titleElement.style.cssText = `
+        color: #28a745;
+        margin: 0 0 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+    `;
+    
+    // Tạo nội dung chi tiết
+    const content = document.createElement('div');
+    content.style.cssText = `
+        margin: 20px 0;
+        text-align: left;
+        line-height: 1.6;
+    `;
+    
+    details.forEach(detail => {
+        const detailDiv = document.createElement('div');
+        detailDiv.style.cssText = `
+            margin: 10px 0;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        `;
+        detailDiv.innerHTML = detail;
+        content.appendChild(detailDiv);
+    });
+    
+    // Tạo nút xác nhận
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Xác nhận';
+    confirmBtn.style.cssText = `
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: background 0.3s;
+    `;
+    
+    confirmBtn.addEventListener('mouseenter', () => {
+        confirmBtn.style.background = '#218838';
+    });
+    
+    confirmBtn.addEventListener('mouseleave', () => {
+        confirmBtn.style.background = '#28a745';
+    });
+    
+    confirmBtn.addEventListener('click', () => {
+        document.body.removeChild(popup);
+    });
+    
+    // Thêm CSS animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Ghép các phần tử
+    popupContent.appendChild(titleElement);
+    popupContent.appendChild(content);
+    popupContent.appendChild(confirmBtn);
+    popup.appendChild(popupContent);
+    
+    // Hiển thị popup
+    document.body.appendChild(popup);
+}
+
+// Hàm hiển thị popup xác nhận
+function showConfirmationPopup(title, ...messagesAndCallbacks) {
+    // Extract onConfirm and onCancel from the end of the array
+    const onCancel = messagesAndCallbacks.pop(); // Last argument is onCancel
+    const onConfirm = messagesAndCallbacks.pop(); // Second to last is onConfirm
+    const messages = messagesAndCallbacks; // Remaining are messages
+    
+    // Tạo popup container
+    const popup = document.createElement('div');
+    popup.id = 'confirmation-popup';
+    popup.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    
+    // Tạo popup content
+    const popupContent = document.createElement('div');
+    popupContent.style.cssText = `
+        background: #fff;
+        border-radius: 10px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Tạo tiêu đề
+    const titleElement = document.createElement('h3');
+    titleElement.textContent = title;
+    titleElement.style.cssText = `
+        color: #007bff;
+        margin: 0 0 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+    `;
+    
+    // Tạo nội dung tin nhắn
+    const messageContainer = document.createElement('div');
+    messageContainer.style.cssText = `
+        margin-bottom: 20px;
+        color: #333;
+    `;
+    
+    messages.forEach(msg => {
+        const messageElement = document.createElement('p');
+        messageElement.textContent = msg;
+        messageElement.style.cssText = `
+            font-size: 16px;
+            line-height: 1.5;
+            margin: 10px 0;
+            text-align: center;
+        `;
+        messageContainer.appendChild(messageElement);
+    });
+    
+    // Tạo nút xác nhận
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Xác nhận';
+    confirmBtn.style.cssText = `
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-right: 10px;
+        transition: background 0.3s;
+    `;
+    
+    // Tạo nút hủy
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Hủy';
+    cancelBtn.style.cssText = `
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s;
+    `;
+    
+    // Thêm hover effects
+    confirmBtn.addEventListener('mouseenter', () => {
+        confirmBtn.style.background = '#218838';
+    });
+    
+    confirmBtn.addEventListener('mouseleave', () => {
+        confirmBtn.style.background = '#28a745';
+    });
+    
+    cancelBtn.addEventListener('mouseenter', () => {
+        cancelBtn.style.background = '#5a6268';
+    });
+    
+    cancelBtn.addEventListener('mouseleave', () => {
+        cancelBtn.style.background = '#6c757d';
+    });
+    
+    // Thêm event listeners
+    confirmBtn.addEventListener('click', () => {
+        document.body.removeChild(popup);
+        if (onConfirm) onConfirm();
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+        document.body.removeChild(popup);
+        if (onCancel) onCancel();
+    });
+    
+    // Ghép các phần tử
+    popupContent.appendChild(titleElement);
+    popupContent.appendChild(messageContainer);
+    popupContent.appendChild(confirmBtn);
+    popupContent.appendChild(cancelBtn);
+    popup.appendChild(popupContent);
+    
+    // Hiển thị popup
+    document.body.appendChild(popup);
+}
+
+// Hàm hiển thị popup lỗi
+function showErrorPopup(message) {
+    // Tạo popup container
+    const popup = document.createElement('div');
+    popup.id = 'error-popup';
+    popup.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    
+    // Tạo popup content
+    const popupContent = document.createElement('div');
+    popupContent.style.cssText = `
+        background: #fff;
+        border-radius: 10px;
+        padding: 30px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Tạo icon lỗi
+    const errorIcon = document.createElement('div');
+    errorIcon.innerHTML = '❌';
+    errorIcon.style.cssText = `
+        font-size: 48px;
+        margin-bottom: 20px;
+    `;
+    
+    // Tạo tiêu đề
+    const title = document.createElement('h3');
+    title.textContent = 'Lỗi';
+    title.style.cssText = `
+        color: #dc3545;
+        margin: 0 0 20px 0;
+        font-size: 24px;
+        font-weight: bold;
+    `;
+    
+    // Tạo nội dung lỗi
+    const content = document.createElement('div');
+    content.textContent = message;
+    content.style.cssText = `
+        margin: 20px 0;
+        color: #6c757d;
+        line-height: 1.5;
+    `;
+    
+    // Tạo nút xác nhận
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Xác nhận';
+    confirmBtn.style.cssText = `
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: background 0.3s;
+    `;
+    
+    confirmBtn.addEventListener('mouseenter', () => {
+        confirmBtn.style.background = '#c82333';
+    });
+    
+    confirmBtn.addEventListener('mouseleave', () => {
+        confirmBtn.style.background = '#dc3545';
+    });
+    
+    confirmBtn.addEventListener('click', () => {
+        document.body.removeChild(popup);
+    });
+    
+    // Ghép các phần tử
+    popupContent.appendChild(errorIcon);
+    popupContent.appendChild(title);
+    popupContent.appendChild(content);
+    popupContent.appendChild(confirmBtn);
+    popup.appendChild(popupContent);
+    
+    // Hiển thị popup
+    document.body.appendChild(popup);
+}
+</script>
+
+{% endblock %}
+    

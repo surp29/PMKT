@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - PHD Computer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+</head>
+<body>
+  <canvas id="bg-planet-canvas"></canvas>
+  <canvas id="bg-star-canvas"></canvas>
+  <canvas id="bg-firefly-canvas"></canvas>
+  <canvas id="bg-wave-canvas"></canvas>
+  <canvas id="bg-sea-canvas"></canvas>
+  <div class="login-container">
+    <div class="login-box">
+      <div class="logo">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+      </div>
+      <h2>Đăng nhập hệ thống</h2>
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="input-group">
+          <input type="text" name="username" placeholder="Tên đăng nhập" required>
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="input-group">
+          <input type="password" name="password" placeholder="Mật khẩu" required>
+          <i class="fas fa-lock"></i>
+        </div>
+        <button type="submit">Đăng nhập</button>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              {% if category in ['error', 'success'] and ('đăng nhập' in message.lower() or 'login' in message.lower() or 'tài khoản' in message.lower() or 'username' in message.lower() or 'password' in message.lower() or 'mật khẩu' in message.lower() or 'tên đăng nhập' in message.lower()) %}
+                <div class="message {{ category }}">
+                  {{ message }}
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </form>
+      <svg class="wave" viewBox="0 0 500 60" preserveAspectRatio="none">
+        <path d="M0,30 Q125,60 250,30 T500,30 V60 H0 Z" fill="#56ccf2" fill-opacity="0.25"/>
+        <path d="M0,40 Q125,20 250,40 T500,40 V60 H0 Z" fill="#2f80ed" fill-opacity="0.18"/>
+      </svg>
+    </div>
+  </div>
+  <script>
+  // Hành tinh, mặt trăng, sao động phía trên
+  const planetCanvas = document.getElementById('bg-planet-canvas');
+  const planetCtx = planetCanvas.getContext('2d');
+  let pw = window.innerWidth, ph = window.innerHeight * 0.6;
+  function resizePlanet() {
+    pw = window.innerWidth;
+    ph = window.innerHeight * 0.6;
+    planetCanvas.width = pw;
+    planetCanvas.height = ph;
+  }
+  resizePlanet();
+  window.addEventListener('resize', resizePlanet);
+  // Tạo random hành tinh, mặt trăng
+  const planets = [
+    {type:'moon', x:pw*0.8, y:ph*0.18, r:38, phase:0, color:'#f5f3ce'},
+    {type:'planet', x:pw*0.18, y:ph*0.13, r:28, phase:Math.PI/2, color:'#b0c4de'},
+    {type:'planet', x:pw*0.5, y:ph*0.08, r:22, phase:Math.PI, color:'#90caf9'}
+  ];
+  function drawMoon(x, y, r) {
+    planetCtx.save();
+    planetCtx.beginPath();
+    planetCtx.arc(x, y, r, 0, 2*Math.PI);
+    planetCtx.fillStyle = '#f5f3ce';
+    planetCtx.shadowColor = '#fffde7';
+    planetCtx.shadowBlur = 18;
+    planetCtx.fill();
+    // vẽ khuyết
+    planetCtx.globalCompositeOperation = 'destination-out';
+    planetCtx.beginPath();
+    planetCtx.arc(x+r*0.4, y-r*0.2, r*0.8, 0, 2*Math.PI);
+    planetCtx.fill();
+    planetCtx.globalCompositeOperation = 'source-over';
+    planetCtx.restore();
+  }
+  function drawPlanet(x, y, r, color) {
+    planetCtx.save();
+    planetCtx.beginPath();
+    planetCtx.arc(x, y, r, 0, 2*Math.PI);
+    planetCtx.fillStyle = color;
+    planetCtx.shadowColor = color;
+    planetCtx.shadowBlur = 16;
+    planetCtx.fill();
+    planetCtx.restore();
+  }
+  function animatePlanets(t) {
+    planetCtx.clearRect(0,0,pw,ph);
+    for(let i=0;i<planets.length;i++){
+      let p = planets[i];
+      let dx = Math.sin(t/900 + p.phase)*12;
+      let dy = Math.cos(t/1100 + p.phase)*8;
+      if(p.type==='moon') drawMoon(p.x+dx, p.y+dy, p.r);
+      else drawPlanet(p.x+dx, p.y+dy, p.r, p.color);
+    }
+    requestAnimationFrame(animatePlanets);
+  }
+  animatePlanets(0);
+
+  // Starfield (sao lấp lánh phía trên)
+  const starCanvas = document.getElementById('bg-star-canvas');
+  const starCtx = starCanvas.getContext('2d');
+  let sw = window.innerWidth, sh = window.innerHeight * 0.6;
+  function resizeStar() {
+    sw = window.innerWidth;
+    sh = window.innerHeight * 0.6;
+    starCanvas.width = sw;
+    starCanvas.height = sh;
+  }
+  resizeStar();
+  window.addEventListener('resize', resizeStar);
+  const stars = Array.from({length: 90}, () => ({
+    x: Math.random()*sw,
+    y: Math.random()*sh,
+    r: Math.random()*1.2+0.5,
+    a: Math.random()*2*Math.PI,
+    speed: Math.random()*0.008+0.002
+  }));
+  function drawStars() {
+    starCtx.clearRect(0,0,sw,sh);
+    for(const s of stars) {
+      s.a += s.speed;
+      let flicker = 0.7 + 0.3*Math.sin(s.a*2);
+      starCtx.save();
+      starCtx.globalAlpha = flicker;
+      starCtx.beginPath();
+      starCtx.arc(s.x, s.y, s.r, 0, 2*Math.PI);
+      starCtx.fillStyle = '#fff';
+      starCtx.shadowColor = '#fff';
+      starCtx.shadowBlur = 8;
+      starCtx.fill();
+      starCtx.restore();
+    }
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+
+  // Sóng biển động phía dưới
+  const waveCanvas = document.getElementById('bg-wave-canvas');
+  const waveCtx = waveCanvas.getContext('2d');
+  let ww = window.innerWidth, wh = window.innerHeight * 0.4;
+  function resizeWave() {
+    ww = window.innerWidth;
+    wh = window.innerHeight * 0.4;
+    waveCanvas.width = ww;
+    waveCanvas.height = wh;
+  }
+  resizeWave();
+  window.addEventListener('resize', resizeWave);
+  let t = 0;
+  function drawWave(y, amp, freq, color, alpha, speed, phase) {
+    waveCtx.save();
+    waveCtx.globalAlpha = alpha;
+    waveCtx.beginPath();
+    waveCtx.moveTo(0, y);
+    for(let x=0; x<=ww; x+=2) {
+      waveCtx.lineTo(x, y + Math.sin((x/ww)*freq + t*speed + phase)*amp);
+    }
+    waveCtx.lineTo(ww, wh);
+    waveCtx.lineTo(0, wh);
+    waveCtx.closePath();
+    waveCtx.fillStyle = color;
+    waveCtx.fill();
+    waveCtx.restore();
+  }
+  function animateWave() {
+    waveCtx.clearRect(0,0,ww,wh);
+    drawWave(wh*0.18, 32, 7*Math.PI, '#56ccf2', 0.18, 0.7, 0);
+    drawWave(wh*0.22, 38, 5*Math.PI, '#2f80ed', 0.13, 0.5, Math.PI/2);
+    drawWave(wh*0.25, 22, 9*Math.PI, '#fff', 0.08, 0.9, Math.PI);
+    t += 0.012;
+    requestAnimationFrame(animateWave);
+  }
+  animateWave();
+
+  // Đom đóm phía dưới
+  const fireflyCanvas = document.getElementById('bg-firefly-canvas');
+  const fireflyCtx = fireflyCanvas.getContext('2d');
+  let fw = window.innerWidth, fh = window.innerHeight;
+  function resizeFirefly() {
+    fw = window.innerWidth;
+    fh = window.innerHeight;
+    fireflyCanvas.width = fw;
+    fireflyCanvas.height = fh;
+  }
+  resizeFirefly();
+  window.addEventListener('resize', resizeFirefly);
+  const fireflies = Array.from({length: 18}, () => ({
+    x: Math.random()*fw,
+    y: fh*0.7 + Math.random()*fh*0.3,
+    r: Math.random()*2.2+1.2,
+    a: Math.random()*2*Math.PI,
+    speed: Math.random()*0.7+0.3,
+    drift: Math.random()*0.5+0.2
+  }));
+  function drawFireflies() {
+    fireflyCtx.clearRect(0,0,fw,fh);
+    for(const f of fireflies) {
+      f.x += Math.cos(f.a)*f.drift;
+      f.y += Math.sin(f.a)*f.drift*0.7;
+      f.a += (Math.random()-0.5)*0.1;
+      if(f.x<0) f.x=fw; if(f.x>fw) f.x=0;
+      if(f.y<fh*0.7) f.y=fh*0.7;
+      if(f.y>fh) f.y=fh;
+      fireflyCtx.save();
+      fireflyCtx.globalAlpha = 0.7 + 0.3*Math.sin(f.a*3);
+      fireflyCtx.beginPath();
+      fireflyCtx.arc(f.x, f.y, f.r, 0, 2*Math.PI);
+      fireflyCtx.fillStyle = '#fffbe6';
+      fireflyCtx.shadowColor = '#ffe066';
+      fireflyCtx.shadowBlur = 16;
+      fireflyCtx.fill();
+      fireflyCtx.restore();
+    }
+    requestAnimationFrame(drawFireflies);
+  }
+  drawFireflies();
+
+  // Biển: cá, cua, mực, rong rêu, tảo động phía dưới
+  const seaCanvas = document.getElementById('bg-sea-canvas');
+  const seaCtx = seaCanvas.getContext('2d');
+  let sw2 = window.innerWidth, sh2 = window.innerHeight * 0.4;
+  function resizeSea() {
+    sw2 = window.innerWidth;
+    sh2 = window.innerHeight * 0.4;
+    seaCanvas.width = sw2;
+    seaCanvas.height = sh2;
+  }
+  resizeSea();
+  window.addEventListener('resize', resizeSea);
+  // Tạo random cá, cua, mực, rong rêu, tảo
+  function randomSeaObj() {
+    const types = ['fish','crab','squid','seaweed','algae'];
+    const t = types[Math.floor(Math.random()*types.length)];
+    return {
+      type: t,
+      x: Math.random()*sw2,
+      y: sh2*0.3 + Math.random()*sh2*0.7,
+      size: 24+Math.random()*32,
+      speed: 0.3+Math.random()*0.7,
+      dir: Math.random()<0.5?1:-1,
+      phase: Math.random()*Math.PI*2
+    };
+  }
+  const seaObjs = Array.from({length: 12}, randomSeaObj);
+  function drawFish(x,y,s,dir,t) {
+    seaCtx.save();
+    seaCtx.translate(x,y);
+    seaCtx.scale(dir,1);
+    // Thân cá
+    seaCtx.beginPath();
+    seaCtx.ellipse(0,0,s*0.7,s*0.32,0,0,2*Math.PI);
+    seaCtx.fillStyle = '#4fc3f7';
+    seaCtx.shadowColor = '#81d4fa';
+    seaCtx.shadowBlur = 8;
+    seaCtx.fill();
+    // Đuôi
+    seaCtx.beginPath();
+    seaCtx.moveTo(-s*0.7,0);
+    seaCtx.lineTo(-s*0.95,-s*0.18);
+    seaCtx.lineTo(-s*0.95,s*0.18);
+    seaCtx.closePath();
+    seaCtx.fillStyle = '#0288d1';
+    seaCtx.fill();
+    // Mắt
+    seaCtx.beginPath();
+    seaCtx.arc(s*0.35,-s*0.08,s*0.07,0,2*Math.PI);
+    seaCtx.fillStyle = '#fff';
+    seaCtx.fill();
+    seaCtx.beginPath();
+    seaCtx.arc(s*0.38,-s*0.08,s*0.03,0,2*Math.PI);
+    seaCtx.fillStyle = '#222';
+    seaCtx.fill();
+    seaCtx.restore();
+  }
+  function drawCrab(x,y,s,dir,t) {
+    seaCtx.save();
+    seaCtx.translate(x,y);
+    seaCtx.scale(dir,1);
+    // Thân
+    seaCtx.beginPath();
+    seaCtx.arc(0,0,s*0.32,0,Math.PI,true);
+    seaCtx.fillStyle = '#ff7043';
+    seaCtx.shadowColor = '#ffab91';
+    seaCtx.shadowBlur = 6;
+    seaCtx.fill();
+    // Chân
+    for(let i=-1;i<=1;i+=2){
+      for(let j=0;j<3;j++){
+        seaCtx.beginPath();
+        seaCtx.moveTo(i*s*0.18,0);
+        seaCtx.lineTo(i*s*0.28, s*0.12*(j-1));
+        seaCtx.strokeStyle = '#ff7043';
+        seaCtx.lineWidth = 2;
+        seaCtx.stroke();
+      }
+    }
+    // Mắt
+    seaCtx.beginPath();
+    seaCtx.arc(-s*0.08,-s*0.18,s*0.04,0,2*Math.PI);
+    seaCtx.arc(s*0.08,-s*0.18,s*0.04,0,2*Math.PI);
+    seaCtx.fillStyle = '#fff';
+    seaCtx.fill();
+    seaCtx.beginPath();
+    seaCtx.arc(-s*0.08,-s*0.18,s*0.015,0,2*Math.PI);
+    seaCtx.arc(s*0.08,-s*0.18,s*0.015,0,2*Math.PI);
+    seaCtx.fillStyle = '#222';
+    seaCtx.fill();
+    seaCtx.restore();
+  }
+  function drawSquid(x,y,s,dir,t) {
+    seaCtx.save();
+    seaCtx.translate(x,y);
+    seaCtx.scale(dir,1);
+    // Thân
+    seaCtx.beginPath();
+    seaCtx.ellipse(0,0,s*0.22,s*0.38,0,0,2*Math.PI);
+    seaCtx.fillStyle = '#b39ddb';
+    seaCtx.shadowColor = '#ede7f6';
+    seaCtx.shadowBlur = 8;
+    seaCtx.fill();
+    // Râu
+    for(let i=-2;i<=2;i++){
+      seaCtx.beginPath();
+      seaCtx.moveTo(i*3, s*0.38);
+      seaCtx.lineTo(i*3, s*0.38+8+Math.sin(t/400+i)*4);
+      seaCtx.strokeStyle = '#b39ddb';
+      seaCtx.lineWidth = 2;
+      seaCtx.stroke();
+    }
+    // Mắt
+    seaCtx.beginPath();
+    seaCtx.arc(0,-s*0.08,s*0.05,0,2*Math.PI);
+    seaCtx.fillStyle = '#fff';
+    seaCtx.fill();
+    seaCtx.beginPath();
+    seaCtx.arc(0,-s*0.08,s*0.02,0,2*Math.PI);
+    seaCtx.fillStyle = '#222';
+    seaCtx.fill();
+    seaCtx.restore();
+  }
+  function drawSeaweed(x,y,s,dir,t) {
+    seaCtx.save();
+    seaCtx.translate(x,y);
+    seaCtx.scale(dir,1);
+    seaCtx.beginPath();
+    seaCtx.moveTo(0,0);
+    for(let i=1;i<=6;i++){
+      seaCtx.lineTo(Math.sin(t/400+i)*4, -i*s*0.13);
+    }
+    seaCtx.strokeStyle = '#388e3c';
+    seaCtx.lineWidth = 4;
+    seaCtx.stroke();
+    seaCtx.restore();
+  }
+  function drawAlgae(x,y,s,dir,t) {
+    seaCtx.save();
+    seaCtx.translate(x,y);
+    seaCtx.scale(dir,1);
+    seaCtx.beginPath();
+    seaCtx.moveTo(0,0);
+    for(let i=1;i<=4;i++){
+      seaCtx.lineTo(Math.cos(t/300+i)*3, -i*s*0.18);
+    }
+    seaCtx.strokeStyle = '#8bc34a';
+    seaCtx.lineWidth = 3;
+    seaCtx.stroke();
+    seaCtx.restore();
+  }
+  function animateSea(t) {
+    seaCtx.clearRect(0,0,sw2,sh2);
+    for(let i=0;i<seaObjs.length;i++){
+      let o = seaObjs[i];
+      let dx = Math.sin(t/900 + o.phase)*8;
+      let dy = Math.cos(t/1100 + o.phase)*4;
+      let x = o.x + dx + t*o.speed*o.dir*0.12;
+      let y = o.y + dy + Math.sin(t/700+i)*2;
+      if(o.type==='fish') drawFish(x%sw2,y,o.size,o.dir,t);
+      else if(o.type==='crab') drawCrab(x%sw2,y,o.size,o.dir,t);
+      else if(o.type==='squid') drawSquid(x%sw2,y,o.size,o.dir,t);
+      else if(o.type==='seaweed') drawSeaweed(x%sw2,y,o.size,o.dir,t);
+      else if(o.type==='algae') drawAlgae(x%sw2,y,o.size,o.dir,t);
+    }
+    requestAnimationFrame(animateSea);
+  }
+  animateSea(0);
+  </script>
+</body>
+</html>

@@ -1,0 +1,995 @@
+{% extends "base.html" %}
+{% block title %}Quản lý kho hàng{% endblock %}
+{% block content %}
+
+<h2 class="page-title"><i class="fas fa-warehouse"></i> Quản lý kho hàng</h2>
+
+<div class="filter-bar">
+  <div class="filter-item">
+    <label>Mã kho</label>
+    <select id="filter-warehouse-code" style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <option value="" disabled selected hidden>Tất cả mã kho</option>
+      {% for warehouse in warehouses %}
+        <option value="{{ warehouse.ma_kho }}">{{ warehouse.ma_kho }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-item">
+    <label>Tên kho</label>
+    <select id="filter-warehouse-name" style="width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <option value="" disabled selected hidden>Tất cả tên kho</option>
+      {% for warehouse in warehouses %}
+        <option value="{{ warehouse.ten_kho }}">{{ warehouse.ten_kho }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-item">
+    <label>Nhóm sản phẩm</label>
+    <select id="filter-group" style="width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <option value="">Tất cả nhóm</option>
+      {% set uniq = namespace(groups=[]) %}
+      {% for w in warehouses %}
+        {% if w.nhom_san_pham and w.nhom_san_pham not in uniq.groups %}
+          {% set _ = uniq.groups.append(w.nhom_san_pham) %}
+        {% endif %}
+      {% endfor %}
+      {% if uniq.groups %}
+        {% for g in uniq.groups %}
+          <option value="{{ g }}">{{ g }}</option>
+        {% endfor %}
+      {% else %}
+        <option value="" disabled>Không có nhóm</option>
+      {% endif %}
+    </select>
+  </div>
+  <div class="filter-item">
+    <label>Trạng thái</label>
+    <select id="filter-status" style="width: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+      <option value="" disabled selected hidden>Tất cả</option>
+      <option value="Còn hàng">Còn hàng</option>
+      <option value="Hết hàng">Hết hàng</option>
+    </select>
+  </div>
+  <button class="clear-btn" onclick="clearWarehouseFilters()" style="width: 120px; height: 38px; padding: 8px 16px; border: none; border-radius: 4px; background: #6c757d; color: white; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 0; align-self: center;"><i class="fas fa-times"></i> Xóa bộ lọc</button>
+</div>
+
+<div class="toolbar">
+  <button onclick="showAddWarehouseModal()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+    <i class="fas fa-plus"></i> Thêm kho hàng
+  </button>
+  <div style="margin-left:auto; text-align:right;">
+    <div class="toolbar-totals" style="color:#000; font-weight:bold; font-size:14px; display:flex; align-items:center; gap:20px;">
+      <span class="toolbar-total">Tổng: {{ warehouses|length if warehouses else 0 }} kho hàng</span>
+      <span aria-hidden="true">|</span>
+      <span class="toolbar-summary">Tổng nhóm sản phẩm: <strong id="summary-groups">0</strong> nhóm</span>
+      <span aria-hidden="true">|</span>
+      <span class="toolbar-quantity">Tổng số lượng: <strong id="summary-quantity">0</strong></span>
+    </div>
+  </div>
+</div>
+
+<table class="product-table">
+  <thead>
+    <tr>
+      <th style="text-align:center;">STT</th>
+      <th style="text-align:center;">Mã Kho</th>
+      <th style="text-align:center;">Tên kho</th>
+      <th style="text-align:center;">Điện thoại</th>
+      <th style="text-align:center;">Địa chỉ</th>
+      <th style="text-align:center;">Nhóm sản phẩm</th>
+      <th style="text-align:center;">Số lượng</th>
+      <th style="text-align:center;">Trạng thái</th>
+      <th style="text-align:center;">Mô tả</th>
+      <th style="text-align:center; width: 120px;">Hành động</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if warehouses %}
+      {% for warehouse in warehouses %}
+      
+      <tr>
+        <td style="text-align:center;">{{ loop.index }}</td>
+        <td style="text-align:center;">{{ warehouse.ma_kho }}</td>
+        <td style="text-align:center;">{{ warehouse.ten_kho }}</td>
+        <td style="text-align:center;">{{ warehouse.dien_thoai or '' }}</td>
+        <td style="text-align:center;">{{ warehouse.dia_chi }}</td>
+        <td style="text-align:center;">{{ warehouse.nhom_san_pham or 'Chưa có nhóm' }}</td>
+        <td style="text-align:center;">{{ warehouse.so_luong_sp or 0 }}</td>
+        <td style="text-align:center;">{{ warehouse.trang_thai or 'Còn hàng' }}</td>
+        <td style="text-align:center;">{{ warehouse.mo_ta or '' }}</td>
+        <td style="text-align:center; padding: 5px;">
+          <div style="display: flex; justify-content: center; gap: 1px;">
+            <button class="btn-delete-warehouse" data-id="{{ warehouse.id }}" data-ma="{{ warehouse.ma_kho }}" data-qty="{{ warehouse.so_luong_sp or 0 }}" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; min-width: 50px; display: flex; align-items: center; justify-content: center;">Xóa</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="10" style="text-align:center;">Không có dữ liệu</td>
+      </tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Modal Cảnh báo (kiểu Hình 1) -->
+<div id="warehouseWarnModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:640px;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd, #0a58ca); color:#fff; display:flex; justify-content:center; align-items:center;">
+      <h3 style="margin:0; color:#fff; text-align:center; width:100%;">Cảnh báo</h3>
+    </div>
+    <div class="modal-body" style="text-align:center; padding:24px 12px 12px;">
+      <div style="font-size:64px; color:#ffc107; line-height:1;">&#9888;</div>
+      <p id="warehouseWarnMessage" style="margin-top:16px; font-size:16px; color:#333;">Không thể xóa nhóm sản phẩm này vì còn hàng!</p>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:center; align-items:center; padding: 8px 0 16px;">
+      <button onclick="closeWarehouseWarnModal()" class="btn-confirm" style="background:#0d6efd;">OK</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" onclick="closeWarehouseWarnModal()"></div>
+  
+</div>
+
+<!-- Modal Xác nhận xóa (kiểu Hình 2) -->
+<div id="warehouseDeleteModal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:520px;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #b02a37); color:#fff;">
+      <h3 style="margin:0;">Xác nhận xóa</h3>
+      <span class="close" onclick="closeWarehouseDeleteConfirmModal()" style="color:#fff;">&times;</span>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <p id="warehouseDeleteMessage" style="margin: 10px 0 0;">Bạn có chắc chắn muốn xóa kho hàng này?</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center; gap:10px;">
+      <button id="confirmDeleteWarehouseBtn" class="btn-confirm" style="background:#dc3545;">Xóa</button>
+      <button onclick="closeWarehouseDeleteConfirmModal()" class="btn-cancel">Hủy</button>
+    </div>
+  </div>
+  <div class="modal-backdrop" onclick="closeWarehouseDeleteConfirmModal()"></div>
+  
+</div>
+
+<!-- Dòng tổng dưới bảng -->
+<div class="bottom-totals" style="margin-top: 10px; display:flex; justify-content:flex-end;">
+  <div style="color:#000; font-weight:bold; font-size:14px; display:flex; align-items:center; gap:20px;">
+    <span class="bt-total">Tổng: {{ warehouses|length if warehouses else 0 }} kho hàng</span>
+    <span aria-hidden="true">|</span>
+    <span> Tổng nhóm sản phẩm: <strong id="bt-groups">0</strong> nhóm</span>
+    <span aria-hidden="true">|</span>
+    <span> Tổng số lượng: <strong id="bt-quantity">0</strong></span>
+  </div>
+  
+</div>
+
+{% if success_message %}
+<div class="modal">
+  <p>{{ success_message }}</p>
+  <a href="{{ url_for('dashboard') }}" style="display:inline-block;padding:8px 16px;border-radius:4px;background:#6c757d;color:#fff;text-decoration:none;">Đóng</a>
+</div>
+{% endif %}
+
+<!-- Modal thêm kho hàng -->
+<div id="addWarehouseModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000;">
+  <div class="modal-backdrop" onclick="attemptCloseAddWarehouseModal()" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); cursor:pointer;"></div>
+  <div class="modal-content" style="position:relative; background:white; margin:50px auto; max-width:800px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:1;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #007bff, #0056b3); padding: 20px; border-radius: 12px 12px 0 0; display:flex; align-items:center; justify-content:space-between;">
+      <h3 style="margin:0; text-align:center; flex:1; color:#fff;">Thêm kho hàng mới</h3>
+      <span class="close" onclick="attemptCloseAddWarehouseModal()" style="color:#fff;">&times;</span>
+    </div>
+    <form id="addWarehouseForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mã kho*</label>
+          <input type="text" id="warehouseCodeInput" placeholder="Nhập mã kho" required>
+        </div>
+        <div class="form-group">
+          <label>Tên kho*</label>
+          <input type="text" id="warehouseNameInput" placeholder="Nhập tên kho" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Điện thoại</label>
+          <input type="text" id="warehousePhoneInput" placeholder="Nhập số điện thoại" inputmode="numeric" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label>Địa chỉ*</label>
+          <input type="text" id="warehouseAddressInput" placeholder="Nhập địa chỉ kho" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nhóm SP</label>
+          <select id="warehouseGroupInput">
+            <option value="">Chọn nhóm sản phẩm</option>
+            <!-- Debug: Hiển thị số lượng product_groups -->
+            <!-- DEBUG: product_groups count: {{ product_groups|length if product_groups else 0 }} -->
+            {% if product_groups %}
+              {% for group in product_groups %}
+                <!-- DEBUG: group data: {{ group }} -->
+                <option value="{{ group.ten_nhom }}" data-qty="{{ group.so_luong or 0 }}">{{ group.ten_nhom }}</option>
+              {% endfor %}
+            {% else %}
+              <!-- DEBUG: Không có product_groups -->
+              <option value="" disabled>Không có nhóm sản phẩm</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Số lượng SP</label>
+          <input type="text" id="warehouseQuantity" placeholder="Tự động tính theo nhóm sản phẩm" readonly style="background: #f8f9fa; color: #6c757d;">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Trạng thái</label>
+          <input type="text" id="warehouseStatusSelect" placeholder="Tự động tính theo sản phẩm" readonly style="background: #f8f9fa; color: #6c757d;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mô tả</label>
+        <textarea id="warehouseDescription" placeholder="Nhập mô tả kho hàng"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="save-btn">Lưu kho hàng</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Xác nhận thoát kho hàng -->
+<div id="confirmExitWarehouseModal" class="modal confirm-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000;">
+  <div class="modal-backdrop" onclick="closeConfirmExitWarehouseModal()" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); cursor:pointer;"></div>
+  <div class="modal-content" style="position:relative; background:white; margin:100px auto; max-width:400px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); z-index:1;">
+    <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd, #0a58ca); padding: 20px; border-radius: 8px 8px 0 0; display:flex; align-items:center; justify-content:center;">
+      <h3 style="margin:0; color:#fff; text-align:center; font-size:18px;">Xác nhận</h3>
+    </div>
+    <div class="modal-body" style="text-align:center; padding: 30px 20px;">
+      <p style="margin:0; color:#333; font-size:16px;">Bạn có chắc muốn thoát?</p>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:center; gap:15px; padding: 0 20px 20px;">
+      <button onclick="confirmExitWarehouse()" class="btn-confirm" style="background:#dc3545; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold; min-width:80px;">Thoát</button>
+      <button onclick="cancelExitWarehouse()" class="btn-cancel" style="background:#6c757d; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold; min-width:80px;">Ở lại</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Hàm chuẩn hóa văn bản tiếng Việt để tìm kiếm
+function normalizeVietnameseText(text) {
+    if (!text) return "";
+    
+    // Mapping dấu tiếng Việt sang không dấu
+    const vietnameseMap = {
+        'à': 'a', 'á': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+        'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+        'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ẩ': 'a', 'ẫ': 'a', 'ậ': 'a',
+        'è': 'e', 'é': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+        'ê': 'e', 'ề': 'e', 'ế': 'e', 'ể': 'e', 'ễ': 'e', 'ệ': 'e',
+        'ì': 'i', 'í': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+        'ò': 'o', 'ó': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+        'ô': 'o', 'ồ': 'o', 'ố': 'o', 'ổ': 'o', 'ỗ': 'o', 'ộ': 'o',
+        'ơ': 'o', 'ờ': 'o', 'ớ': 'o', 'ở': 'o', 'ỡ': 'o', 'ợ': 'o',
+        'ù': 'u', 'ú': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+        'ư': 'u', 'ừ': 'u', 'ứ': 'u', 'ử': 'u', 'ữ': 'u', 'ự': 'u',
+        'ỳ': 'y', 'ý': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+        'đ': 'd',
+        'À': 'A', 'Á': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A',
+        'Ă': 'A', 'Ằ': 'A', 'Ắ': 'A', 'Ẳ': 'A', 'Ẵ': 'A', 'Ặ': 'A',
+        'Â': 'A', 'Ầ': 'A', 'Ấ': 'A', 'Ẩ': 'A', 'Ẫ': 'A', 'Ậ': 'A',
+        'È': 'E', 'É': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E',
+        'Ê': 'E', 'Ề': 'E', 'Ế': 'E', 'Ể': 'E', 'Ễ': 'E', 'Ệ': 'E',
+        'Ì': 'I', 'Í': 'I', 'Ỉ': 'I', 'Ĩ': 'I', 'Ị': 'I',
+        'Ò': 'O', 'Ó': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O',
+        'Ô': 'O', 'Ồ': 'O', 'Ố': 'O', 'Ổ': 'O', 'Ỗ': 'O', 'Ộ': 'O',
+        'Ơ': 'O', 'Ờ': 'O', 'Ớ': 'O', 'Ở': 'O', 'Ỡ': 'O', 'Ợ': 'O',
+        'Ù': 'U', 'Ú': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U',
+        'Ư': 'U', 'Ừ': 'U', 'Ứ': 'U', 'Ử': 'U', 'Ữ': 'U', 'Ự': 'U',
+        'Ỳ': 'Y', 'Ý': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
+        'Đ': 'D'
+    };
+    
+    // Thay thế dấu tiếng Việt
+    let normalized = text;
+    for (const [accented, plain] of Object.entries(vietnameseMap)) {
+        normalized = normalized.replace(new RegExp(accented, 'g'), plain);
+    }
+    
+    // Chuyển về chữ thường và loại bỏ khoảng trắng thừa
+    normalized = normalized.toLowerCase().trim();
+    
+    return normalized;
+}
+
+// Hàm tìm kiếm linh hoạt - hỗ trợ tìm kiếm dính liền và tách rời
+function flexibleSearch(searchText, targetText) {
+    if (!searchText || !targetText) return false;
+    
+    // Chuẩn hóa cả hai văn bản
+    const normalizedSearch = normalizeVietnameseText(searchText);
+    const normalizedTarget = normalizeVietnameseText(targetText);
+    
+    // 1. Tìm kiếm trực tiếp (bao gồm cả dính liền)
+    if (normalizedTarget.includes(normalizedSearch)) {
+        return true;
+    }
+    
+    // 2. Tìm kiếm khi tách từ (nếu searchText có thể tách thành nhiều từ)
+    const searchWords = normalizedSearch.split(/\s+/).filter(word => word.length > 0);
+    if (searchWords.length > 1) {
+        // Nếu có nhiều từ, kiểm tra xem tất cả từ có xuất hiện trong target không
+        return searchWords.every(word => normalizedTarget.includes(word));
+    }
+    
+    // 3. Tìm kiếm khi ghép từ (nếu searchText có thể là từ ghép)
+    if (normalizedSearch.length > 3) {
+        // Thử tách thành các từ có thể có
+        const possibleCombinations = generatePossibleCombinations(normalizedSearch);
+        for (const combination of possibleCombinations) {
+            if (normalizedTarget.includes(combination)) {
+                return true;
+            }
+        }
+    }
+    
+    // 4. Tìm kiếm fuzzy - kiểm tra độ tương tự
+    if (calculateSimilarity(normalizedSearch, normalizedTarget) > 0.7) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Hàm tạo các tổ hợp từ có thể có từ một chuỗi dính liền
+function generatePossibleCombinations(text) {
+    const combinations = [];
+    
+    // Thêm chính nó
+    combinations.push(text);
+    
+    // Thêm các biến thể có thể có
+    if (text.length > 4) {
+        // Thử chèn khoảng trắng ở các vị trí khác nhau
+        for (let i = 2; i < text.length - 1; i++) {
+            const part1 = text.substring(0, i);
+            const part2 = text.substring(i);
+            combinations.push(part1 + ' ' + part2);
+        }
+    }
+    
+    // Thêm các biến thể thay thế ký tự tương tự
+    const similarChars = {
+        'd': ['d', 'đ'],
+        'đ': ['d', 'đ'],
+        'i': ['i', 'y'],
+        'y': ['i', 'y'],
+        'u': ['u', 'ư'],
+        'ư': ['u', 'ư'],
+        'o': ['o', 'ô', 'ơ'],
+        'ô': ['o', 'ô', 'ơ'],
+        'ơ': ['o', 'ô', 'ơ'],
+        'a': ['a', 'ă', 'â'],
+        'ă': ['a', 'ă', 'â'],
+        'â': ['a', 'ă', 'â'],
+        'e': ['e', 'ê'],
+        'ê': ['e', 'ê']
+    };
+    
+    // Tạo biến thể với các ký tự tương tự
+    for (const [char, alternatives] of Object.entries(similarChars)) {
+        if (text.includes(char)) {
+            for (const alt of alternatives) {
+                if (alt !== char) {
+                    combinations.push(text.replace(new RegExp(char, 'g'), alt));
+                }
+            }
+        }
+    }
+    
+    return combinations;
+}
+
+// Hàm tính độ tương tự giữa hai chuỗi (Levenshtein distance)
+function calculateSimilarity(str1, str2) {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+            if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    
+    const maxLength = Math.max(str1.length, str2.length);
+    const similarity = 1 - (matrix[str2.length][str1.length] / maxLength);
+    return similarity;
+}
+
+function filterWarehouses() {
+    const warehouseCodeFilter = normalizeVietnameseText(document.getElementById('filter-warehouse-code')?.value || '');
+    const warehouseNameFilter = normalizeVietnameseText(document.getElementById('filter-warehouse-name')?.value || '');
+    const groupFilter = normalizeVietnameseText(document.getElementById('filter-group')?.value || '');
+    const statusFilter = document.getElementById('filter-status')?.value?.toLowerCase() || '';
+    
+    const rows = document.querySelectorAll('.product-table tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach((row) => {
+        // Kiểm tra null trước khi truy cập textContent
+        const codeCell = row.querySelector('td:nth-child(2)');
+        const nameCell = row.querySelector('td:nth-child(3)');
+        const groupCell = row.querySelector('td:nth-child(6)');
+        const statusCell = row.querySelector('td:nth-child(8)');
+        
+        // Bỏ qua nếu không tìm thấy các cell cần thiết
+        if (!codeCell || !nameCell || !groupCell || !statusCell) {
+            console.warn('⚠️ Bỏ qua row không có đủ cell:', row);
+            return;
+        }
+        
+        const warehouseCode = normalizeVietnameseText(codeCell.textContent || '');
+        const warehouseName = normalizeVietnameseText(nameCell.textContent || '');
+        const groupName = normalizeVietnameseText(groupCell.textContent || '');
+        const status = (statusCell.textContent || '').toLowerCase();
+        
+        const codeMatch = !warehouseCodeFilter || warehouseCodeFilter === '' || flexibleSearch(warehouseCodeFilter, warehouseCode);
+        const nameMatch = !warehouseNameFilter || warehouseNameFilter === '' || flexibleSearch(warehouseNameFilter, warehouseName);
+        const groupMatch = !groupFilter || flexibleSearch(groupFilter, groupName);
+        const statusMatch = !statusFilter || statusFilter === '' || status.includes(statusFilter);
+        
+        if (codeMatch && nameMatch && groupMatch && statusMatch) {
+            row.style.display = '';
+            visibleCount++;
+            const sttCell = row.querySelector('td:nth-child(1)');
+            if (sttCell) { sttCell.textContent = visibleCount; }
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Cập nhật tổng số kho hàng
+    const totalSpan = document.querySelector('.toolbar .toolbar-total');
+    if (totalSpan) { totalSpan.textContent = `Tổng: ${visibleCount} kho hàng`; }
+    const btTotal = document.querySelector('.bottom-totals .bt-total');
+    if (btTotal) { btTotal.textContent = `Tổng: ${visibleCount} kho hàng`; }
+    
+    // Cập nhật tổng nhóm và số lượng dựa trên dữ liệu hiển thị
+    let totalGroups = 0;
+    let totalQuantity = 0;
+    const visibleGroups = new Set();
+    
+    rows.forEach((row) => {
+        if (row.style.display !== 'none') {
+            const groupCell = row.querySelector('td:nth-child(6)');
+            const quantityCell = row.querySelector('td:nth-child(7)');
+            
+            if (groupCell && quantityCell) {
+                const groupName = (groupCell.textContent || '').trim();
+                const quantity = parseInt(quantityCell.textContent || '0', 10) || 0;
+                
+                if (groupName && groupName !== 'Chưa có nhóm') {
+                    visibleGroups.add(groupName);
+                    totalQuantity += quantity;
+                }
+            }
+        }
+    });
+    
+    totalGroups = visibleGroups.size;
+    
+    // Cập nhật tổng nhóm và số lượng
+    const summaryGroups = document.getElementById('summary-groups');
+    const summaryQuantity = document.getElementById('summary-quantity');
+    if (summaryGroups) { summaryGroups.textContent = totalGroups; }
+    if (summaryQuantity) { summaryQuantity.textContent = totalQuantity; }
+    const btGroups = document.getElementById('bt-groups');
+    const btQuantity = document.getElementById('bt-quantity');
+    if (btGroups) { btGroups.textContent = totalGroups; }
+    if (btQuantity) { btQuantity.textContent = totalQuantity; }
+    
+    console.log(`🔍 Filter hoàn thành: ${visibleCount} kho hàng hiển thị, ${totalGroups} nhóm, ${totalQuantity} sản phẩm`);
+}
+
+function clearWarehouseFilters() {
+    // Kiểm tra null trước khi reset
+    const codeFilter = document.getElementById('filter-warehouse-code');
+    const nameFilter = document.getElementById('filter-warehouse-name');
+    const groupFilter = document.getElementById('filter-group');
+    const statusFilter = document.getElementById('filter-warehouse-status');
+    
+    if (codeFilter) codeFilter.selectedIndex = 0; // Reset về placeholder "Tất cả mã kho"
+    if (nameFilter) nameFilter.selectedIndex = 0; // Reset về placeholder "Tất cả tên kho"
+    if (groupFilter) groupFilter.value = '';
+    if (statusFilter) statusFilter.selectedIndex = 0; // Reset về placeholder "Tất cả"
+    
+    filterWarehouses();
+    
+    // Cập nhật tổng số kho hàng
+    const totalSpan = document.querySelector('.toolbar .toolbar-total');
+    const btTotal = document.querySelector('.bottom-totals .bt-total');
+    
+    if (totalSpan) {
+        const allRows = document.querySelectorAll('.product-table tbody tr');
+        let totalCount = 0;
+        allRows.forEach((row) => { 
+            if (!row.querySelector('td[colspan]')) totalCount++; 
+        });
+        totalSpan.textContent = `Tổng: ${totalCount} kho hàng`;
+    }
+    
+    if (btTotal) {
+        const allRows = document.querySelectorAll('.product-table tbody tr');
+        let totalCount = 0;
+        allRows.forEach((row) => { 
+            if (!row.querySelector('td[colspan]')) totalCount++; 
+        });
+        btTotal.textContent = `Tổng: ${totalCount} kho hàng`;
+    }
+    
+    // Reset tổng nhóm và số lượng về giá trị ban đầu
+    const summaryGroups = document.getElementById('summary-groups');
+    const summaryQuantity = document.getElementById('summary-quantity');
+    const btGroups = document.getElementById('bt-groups');
+    const btQuantity = document.getElementById('bt-quantity');
+    
+    if (summaryGroups && summaryQuantity) {
+        const allRows = document.querySelectorAll('.product-table tbody tr');
+        let totalGroups = 0;
+        let totalQuantity = 0;
+        const allGroups = new Set();
+        
+        allRows.forEach((row) => {
+            if (!row.querySelector('td[colspan]')) {
+                const groupCell = row.querySelector('td:nth-child(6)');
+                const quantityCell = row.querySelector('td:nth-child(7)');
+                
+                if (groupCell && quantityCell) {
+                    const groupName = (groupCell.textContent || '').trim();
+                    const quantity = parseInt(quantityCell.textContent || '0', 10) || 0;
+                    
+                    if (groupName && groupName !== 'Chưa có nhóm') {
+                        allGroups.add(groupName);
+                        totalQuantity += quantity;
+                    }
+                }
+            }
+        });
+        
+        const groupsCount = allGroups.size;
+        const qty = totalQuantity;
+        summaryGroups.textContent = groupsCount;
+        summaryQuantity.textContent = qty;
+        if (btGroups) btGroups.textContent = groupsCount;
+        if (btQuantity) btQuantity.textContent = qty;
+    }
+    
+    console.log('🔄 Đã xóa bộ lọc và reset về trạng thái ban đầu');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Debug: Kiểm tra dữ liệu product_groups
+    console.log('🔍 Debug product_groups data:');
+    console.log('  - product_groups variable:', typeof product_groups !== 'undefined' ? product_groups : 'undefined');
+    console.log('  - product_groups length:', typeof product_groups !== 'undefined' ? product_groups.length : 'N/A');
+    
+    // Debug: Kiểm tra dropdown warehouseGroupInput
+    const warehouseGroupSelect = document.getElementById('warehouseGroupInput');
+    if (warehouseGroupSelect) {
+        console.log('  - warehouseGroupInput found:', warehouseGroupSelect);
+        console.log('  - warehouseGroupInput options count:', warehouseGroupSelect.options.length);
+        console.log('  - warehouseGroupInput options:');
+        for (let i = 0; i < warehouseGroupSelect.options.length; i++) {
+            const option = warehouseGroupSelect.options[i];
+            console.log(`    Option ${i}: value="${option.value}", text="${option.text}", data-qty="${option.getAttribute('data-qty')}"`);
+        }
+    } else {
+        console.log('  - ❌ warehouseGroupInput NOT found!');
+    }
+    
+    document.getElementById('filter-warehouse-code').addEventListener('change', filterWarehouses);
+    document.getElementById('filter-warehouse-name').addEventListener('change', filterWarehouses);
+    document.getElementById('filter-group').addEventListener('change', filterWarehouses);
+    document.getElementById('filter-status').addEventListener('change', filterWarehouses);
+    
+    // Tính toán tổng ban đầu khi trang load
+    filterWarehouses();
+});
+
+// Dữ liệu số lượng theo nhóm được đính kèm trên option qua data-qty
+
+function showAddWarehouseModal() {
+    document.getElementById('addWarehouseForm').reset();
+    // Mặc định rỗng tất cả input để người dùng tự nhập
+    document.getElementById('warehouseCodeInput').value = '';
+    document.getElementById('warehouseNameInput').value = '';
+    document.getElementById('warehousePhoneInput').value = '';
+    document.getElementById('warehouseAddressInput').value = '';
+    document.getElementById('warehouseGroupInput').value = '';
+    document.getElementById('warehouseQuantity').value = '';
+    document.getElementById('warehouseStatusSelect').value = '';
+    document.getElementById('warehouseDescription').value = '';
+    const modal = document.getElementById('addWarehouseModal');
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+}
+
+function closeAddWarehouseModal() { 
+    const modal = document.getElementById('addWarehouseModal'); 
+    modal.style.display = 'none'; 
+    modal.classList.remove('show'); 
+}
+
+// Kiểm tra form trống
+function isAddWarehouseFormEmpty(){
+    const code = document.getElementById('warehouseCodeInput').value.trim();
+    const name = document.getElementById('warehouseNameInput').value.trim();
+    const phone = document.getElementById('warehousePhoneInput').value.trim();
+    const addr = document.getElementById('warehouseAddressInput').value.trim();
+    const group = document.getElementById('warehouseGroupInput').value.trim();
+    const qty = document.getElementById('warehouseQuantity').value.trim();
+    const status = document.getElementById('warehouseStatusSelect').value.trim();
+    const desc = document.getElementById('warehouseDescription').value.trim();
+    return !code && !name && !phone && !addr && !group && !qty && !status && !desc;
+}
+
+// Cố gắng đóng modal: nếu form trống thì đóng ngay, nếu có dữ liệu thì hỏi xác nhận
+function attemptCloseAddWarehouseModal(){
+    if (isAddWarehouseFormEmpty()){
+        closeAddWarehouseModal();
+    } else {
+        showConfirmExitWarehouseModal();
+    }
+}
+
+function showConfirmExitWarehouseModal() { 
+    const modal = document.getElementById('confirmExitWarehouseModal'); 
+    modal.style.display = 'flex'; 
+    modal.classList.add('show'); 
+}
+
+function closeConfirmExitWarehouseModal() { 
+    const modal = document.getElementById('confirmExitWarehouseModal'); 
+    modal.style.display = 'none'; 
+    modal.classList.remove('show'); 
+}
+
+function cancelExitWarehouse() { 
+    closeConfirmExitWarehouseModal(); 
+}
+
+function confirmExitWarehouse() { 
+    closeAddWarehouseModal(); 
+    closeConfirmExitWarehouseModal(); 
+}
+
+// ================== Xóa kho: Cảnh báo và Xác nhận ==================
+// Modal cảnh báo: không thể xóa vì còn hàng
+function showWarehouseWarnModal(message){
+    const modal = document.getElementById('warehouseWarnModal');
+    const msg = document.getElementById('warehouseWarnMessage');
+    if (msg) msg.textContent = message;
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+}
+function closeWarehouseWarnModal(){
+    const modal = document.getElementById('warehouseWarnModal');
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+}
+
+// Modal xác nhận xóa: chỉ hiện khi số lượng = 0
+function showWarehouseDeleteConfirmModal(warehouseId, maKho){
+    const modal = document.getElementById('warehouseDeleteModal');
+    const msg = document.getElementById('warehouseDeleteMessage');
+    if (msg) msg.textContent = `Bạn có chắc chắn muốn xóa kho hàng "${maKho}"?`;
+    const btn = document.getElementById('confirmDeleteWarehouseBtn');
+    if (btn){ btn.setAttribute('data-id', warehouseId); btn.setAttribute('data-ma', maKho); }
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+}
+function closeWarehouseDeleteConfirmModal(){
+    const modal = document.getElementById('warehouseDeleteModal');
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+}
+
+function deleteWarehouse(warehouseId, maKho) {
+    const doDelete = () => {
+        console.log(`🗑️ Bắt đầu xóa kho hàng: ${maKho} (ID: ${warehouseId})`);
+        
+        const backendUrl = '{{ BACKEND_URL }}';
+        console.log('🌐 Sử dụng backend URL:', backendUrl);
+        
+        const apiUrl = `${backendUrl}/api/warehouses/${warehouseId}`;
+        console.log('🌐 Gọi API DELETE:', apiUrl);
+        
+        fetch(apiUrl, { 
+            method: 'DELETE', 
+            headers: { 'Content-Type': 'application/json' } 
+        })
+        .then(response => {
+            console.log('📡 Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => { 
+            console.log('✅ Response data:', data);
+            if (data.success) { 
+                if (window.showSuccessModal) { 
+                    showSuccessModal('Xóa kho hàng thành công!', function(){ location.reload(); }); 
+                } else { 
+                    if (window.showSuccessModal) { showSuccessModal('✅ Xóa kho hàng thành công!'); } else { alert('✅ Xóa kho hàng thành công!'); }
+                    location.reload(); 
+                } 
+            } else { 
+                if (window.showErrorModal) { showErrorModal('❌ Lỗi: ' + (data.message || 'Không xác định được lỗi')); } else { alert('❌ Lỗi: ' + (data.message || 'Không xác định được lỗi')); } 
+            } 
+        })
+        .catch(err => { 
+            console.error('❌ Lỗi khi xóa kho hàng:', err);
+            if (err.message.includes('404')) {
+                if (window.showErrorModal) { showErrorModal('❌ Lỗi: API endpoint không tồn tại. Vui lòng kiểm tra backend!'); } else { alert('❌ Lỗi: API endpoint không tồn tại. Vui lòng kiểm tra backend!'); }
+            } else if (err.message.includes('Failed to fetch')) {
+                if (window.showErrorModal) { showErrorModal('❌ Lỗi: Không thể kết nối đến backend. Vui lòng kiểm tra kết nối!'); } else { alert('❌ Lỗi: Không thể kết nối đến backend. Vui lòng kiểm tra kết nối!'); }
+            } else {
+                if (window.showErrorModal) { showErrorModal('❌ Lỗi: ' + err.message); } else { alert('❌ Lỗi: ' + err.message); }
+            }
+        });
+    };
+    if (window.openPopup) {
+        window.openPopup('confirm', `Bạn có chắc chắn muốn xóa kho hàng "${maKho}"?`, doDelete);
+    } else {
+        if (confirm(`Bạn có chắc chắn muốn xóa kho hàng "${maKho}"?`)) { doDelete(); }
+    }
+ }
+
+// Submit thêm kho hàng (gọi FastAPI)
+document.getElementById('addWarehouseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    console.log('🚀 Bắt đầu thêm kho hàng mới...');
+    
+    // Kiểm tra các trường bắt buộc
+    const maKho = document.getElementById('warehouseCodeInput')?.value?.trim();
+    const tenKho = document.getElementById('warehouseNameInput')?.value?.trim();
+    const diaChi = document.getElementById('warehouseAddressInput')?.value?.trim();
+    
+    if (!maKho || !tenKho || !diaChi) {
+        if (window.showErrorModal) { showErrorModal('⚠️ Vui lòng điền đầy đủ các trường bắt buộc (Mã kho, Tên kho, Địa chỉ)!'); } else { alert('⚠️ Vui lòng điền đầy đủ các trường bắt buộc (Mã kho, Tên kho, Địa chỉ)!'); }
+        return;
+    }
+    
+    const payload = {
+        ma_kho: maKho,
+        ten_kho: tenKho,
+        dia_chi: diaChi,
+        dien_thoai: document.getElementById('warehousePhoneInput')?.value?.trim() || '',
+        so_luong_sp: parseInt(document.getElementById('warehouseQuantity')?.value || '0', 10) || 0,
+        trang_thai: document.getElementById('warehouseStatusSelect')?.value || 'Còn hàng',
+        nhom_san_pham: document.getElementById('warehouseGroupInput')?.value || '',
+        mo_ta: document.getElementById('warehouseDescription')?.value?.trim() || '',
+    };
+    
+    console.log('📋 Payload gửi đi:', payload);
+    
+    // Sử dụng backend URL từ config
+    const backendUrl = '{{ BACKEND_URL }}';
+    console.log('🌐 Sử dụng backend URL:', backendUrl);
+    
+    const apiUrl = `${backendUrl}/api/warehouses/`;
+    console.log('🌐 Gọi API:', apiUrl);
+    
+    fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(response => {
+        console.log('📡 Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('✅ Response data:', data);
+        if (data.success || data.id) {
+            if (window.showSuccessModal) {
+                showSuccessModal('Thêm kho hàng thành công!', function(){ location.reload(); });
+            } else {
+                if (window.showSuccessModal) { showSuccessModal('✅ Thêm kho hàng thành công!'); } else { alert('✅ Thêm kho hàng thành công!'); }
+                location.reload();
+            }
+        } else {
+            const errorMsg = data.detail || data.message || data.error || 'Không xác định được lỗi';
+            if (window.showErrorModal) { showErrorModal('❌ Lỗi: ' + errorMsg); } else { alert('❌ Lỗi: ' + errorMsg); }
+        }
+    })
+    .catch(err => {
+        console.error('❌ Lỗi khi thêm kho hàng:', err);
+        if (err.message.includes('404')) {
+            if (window.showErrorModal) { showErrorModal('❌ Lỗi: API endpoint không tồn tại. Vui lòng kiểm tra backend!'); } else { alert('❌ Lỗi: API endpoint không tồn tại. Vui lòng kiểm tra backend!'); }
+        } else if (err.message.includes('Failed to fetch')) {
+            if (window.showErrorModal) { showErrorModal('❌ Lỗi: Không thể kết nối đến backend. Vui lòng kiểm tra kết nối!'); } else { alert('❌ Lỗi: Không thể kết nối đến backend. Vui lòng kiểm tra kết nối!'); }
+        } else {
+            if (window.showErrorModal) { showErrorModal('❌ Lỗi: ' + err.message); } else { alert('❌ Lỗi: ' + err.message); }
+        }
+    });
+});
+
+// Cập nhật số lượng và trạng thái theo nhóm được chọn
+(function(){
+  const sel = document.getElementById('warehouseGroupInput');
+  if (!sel) return;
+  sel.addEventListener('change', function(){
+    const opt = this.options[this.selectedIndex];
+    const qtyFromGroup = parseInt(opt?.getAttribute('data-qty') || '0', 10);
+    const qtyEl = document.getElementById('warehouseQuantity');
+    qtyEl.value = String(qtyFromGroup);
+    const statusEl = document.getElementById('warehouseStatusSelect');
+    statusEl.value = qtyFromGroup > 0 ? 'Còn hàng' : 'Hết hàng';
+  });
+})();
+
+// Ràng buộc nhập điện thoại: bắt đầu bằng 0 và đủ 10 số
+document.addEventListener('DOMContentLoaded', function(){
+  const phoneInput = document.getElementById('warehousePhoneInput');
+  if (!phoneInput) return;
+  function validatePhone(){
+    phoneInput.value = phoneInput.value.replace(/[^0-9]/g, '');
+    const isValid = /^0\d{9}$/.test(phoneInput.value);
+    phoneInput.style.borderColor = (isValid || phoneInput.value === '') ? '#ced4da' : '#dc3545';
+    phoneInput.style.boxShadow = (isValid || phoneInput.value === '') ? '' : '0 0 0 0.2rem rgba(220,53,69,.25)';
+    return isValid;
+  }
+  phoneInput.addEventListener('input', validatePhone);
+
+  // Tự động chèn số 0 khi người dùng nhấp/focus vào ô điện thoại
+  phoneInput.addEventListener('focus', function(){
+    const onlyDigits = phoneInput.value.replace(/[^0-9]/g, '');
+    if (onlyDigits.length === 0) {
+      phoneInput.value = '0';
+    } else if (!onlyDigits.startsWith('0')) {
+      phoneInput.value = '0' + onlyDigits.substring(0, 9);
+    } else {
+      phoneInput.value = onlyDigits.substring(0, 10);
+    }
+    // Đặt con trỏ ở cuối và re-validate
+    try { phoneInput.setSelectionRange(phoneInput.value.length, phoneInput.value.length); } catch(_) {}
+    validatePhone();
+  });
+
+  const form = document.getElementById('addWarehouseForm');
+  if (form){
+    form.addEventListener('submit', function(e){
+      if (!validatePhone()){
+        e.preventDefault();
+        phoneInput.focus();
+      }
+    });
+  }
+  
+  // Áp dụng phân quyền cho trang warehouse
+  if (window.checkUserPermissions) {
+    window.checkUserPermissions();
+  }
+});
+
+// Thêm nút xóa có điều kiện (chỉ xóa khi hết hàng)
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.btn-delete-warehouse');
+  if (!btn) return;
+  const qty = parseInt(btn.dataset.qty || '0', 10);
+  const id = btn.dataset.id;
+  const ma = btn.dataset.ma;
+  if (qty > 0){
+    // Hiện modal cảnh báo như hình 1
+    showWarehouseWarnModal(`Không thể xóa nhóm sản phẩm này vì còn ${qty} sản phẩm trong kho!`);
+    return;
+  }
+  // Hiện modal xác nhận như hình 2
+  showWarehouseDeleteConfirmModal(id, ma);
+});
+
+// Debug functions (chỉ trong development)
+if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+  window.debugWarehouse = {
+    checkElements: () => {
+      console.log('🔍 Debug các element trong warehouse.html:');
+      
+      const elements = {
+        'filter-warehouse-code': document.getElementById('filter-warehouse-code'),
+        'filter-warehouse-name': document.getElementById('filter-warehouse-name'),
+        'filter-group': document.getElementById('filter-group'),
+        'filter-status': document.getElementById('filter-status'),
+        'warehouseCodeInput': document.getElementById('warehouseCodeInput'),
+        'warehouseNameInput': document.getElementById('warehouseNameInput'),
+        'warehousePhoneInput': document.getElementById('warehousePhoneInput'),
+        'warehouseAddressInput': document.getElementById('warehouseAddressInput'),
+        'warehouseGroupInput': document.getElementById('warehouseGroupInput'),
+        'warehouseQuantity': document.getElementById('warehouseQuantity'),
+        'warehouseStatusSelect': document.getElementById('warehouseStatusSelect'),
+        'warehouseDescription': document.getElementById('warehouseDescription')
+      };
+      
+      Object.entries(elements).forEach(([name, element]) => {
+        if (element) {
+          console.log(`  ✅ ${name}: tồn tại`);
+        } else {
+          console.log(`  ❌ ${name}: KHÔNG tồn tại`);
+        }
+      });
+      
+      // Kiểm tra bảng
+      const table = document.querySelector('.product-table');
+      const tbody = table?.querySelector('tbody');
+      const rows = tbody?.querySelectorAll('tr');
+      
+      console.log(`  📊 Bảng: ${table ? 'tồn tại' : 'KHÔNG tồn tại'}`);
+      console.log(`  📋 Tbody: ${tbody ? 'tồn tại' : 'KHÔNG tồn tại'}`);
+      console.log(`  📝 Số rows: ${rows ? rows.length : 0}`);
+      
+      if (rows) {
+        rows.forEach((row, index) => {
+          const cells = row.querySelectorAll('td');
+          console.log(`    Row ${index}: ${cells.length} cells`);
+        });
+      }
+        },
+    
+    checkBackendUrl: () => {
+      const backendUrl = '{{ BACKEND_URL }}';
+      console.log('🌐 Backend URL:', backendUrl);
+      console.log('🔗 API Warehouses URL:', `${backendUrl}/api/warehouses/`);
+      console.log('✅ Backend URL đã được cấu hình từ config');
+    }
+  };
+  
+  console.log('🔧 Debug functions available:');
+  console.log('  - window.debugWarehouse.checkElements() (kiểm tra các element)');
+  
+  console.log('  - window.debugWarehouse.checkBackendUrl() (kiểm tra backend URL)');
+}
+
+// Xử lý nút xác nhận xóa trong modal xác nhận
+document.addEventListener('click', function(e){
+  const confirmBtn = e.target.closest('#confirmDeleteWarehouseBtn');
+  if (!confirmBtn) return;
+  const id = confirmBtn.getAttribute('data-id');
+  const ma = confirmBtn.getAttribute('data-ma');
+  fetch(`{{ BACKEND_URL }}/api/warehouses/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+    .then(r=>r.json())
+    .then(data=>{ 
+      if (data.success){ 
+        closeWarehouseDeleteConfirmModal();
+        if (window.showSuccessModal){ 
+          showSuccessModal('Xóa kho hàng thành công!', function(){ location.reload(); }); 
+        } else { 
+          location.reload(); 
+        }
+      } else { 
+        if (window.showErrorModal) { showErrorModal('Lỗi: ' + (data.message||'')); } else { alert('Lỗi: ' + (data.message||'')); } 
+      } 
+    })
+    .catch(()=> { if (window.showErrorModal) { showErrorModal('Có lỗi xảy ra khi xóa kho hàng!'); } else { alert('Có lỗi xảy ra khi xóa kho hàng!'); } });
+});
+</script>
+
+{% endblock %}

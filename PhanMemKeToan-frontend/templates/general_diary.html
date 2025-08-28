@@ -1,0 +1,672 @@
+{% extends "base.html" %}
+{% block title %}Nhật ký chung - Nhập liệu{% endblock %}
+{% block content %}
+<div style="text-align: center; margin-bottom: 20px;">
+  <h2 class="page-title">Nhật ký chung</h2>
+</div>
+
+<div class="form-container">
+  <form id="generalDiaryForm" style="display: flex; gap: 20px; width: 100%;">
+    <div class="form-left">
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <label style="min-width: 120px; margin-right: 10px;">Ngày nhập hàng:</label>
+        <input type="date" name="ngay_nhap" style="flex: 1;">
+      </div>
+             <div style="display: flex; align-items: center; margin-bottom: 10px;">
+         <label style="min-width: 120px; margin-right: 10px;">Số hiệu:</label>
+         <input type="text" name="so_hieu" placeholder="PC/PT(xxxx)" style="flex: 1;">
+       </div>
+      <div style="display: flex; align-items: flex-start; margin-bottom: 10px;">
+        <label style="min-width: 120px; margin-right: 10px; margin-top: 8px;">Diễn giải:</label>
+        <textarea name="dien_giai" placeholder="Mô tả..." style="flex: 1; min-height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+      </div>
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <label style="min-width: 120px; margin-right: 10px;">TK nợ:</label>
+        <input type="text" name="tk_no" placeholder="Nhập vào đây" style="flex: 1;">
+      </div>
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <label style="min-width: 120px; margin-right: 10px;">TK có:</label>
+        <input type="text" name="tk_co" placeholder="Nhập vào đây" style="flex: 1;">
+      </div>
+    </div>
+    <div class="form-right">
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <label style="min-width: 120px; margin-right: 10px;">Số lượng nhập:</label>
+        <input type="number" name="so_luong_nhap" min="0" class="quantity-input" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" oninput="validatePositiveInteger(this)">
+      </div>
+      <div style="display: flex; align-items: center; margin-bottom: 10px;">
+        <label style="min-width: 120px; margin-right: 10px;">Số lượng xuất:</label>
+        <input type="number" name="so_luong_xuat" min="0" class="quantity-input" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" oninput="validatePositiveInteger(this)">
+      </div>
+      <div class="money-input-container" style="margin-bottom: 10px; display: flex; align-items: center;">
+        <label style="min-width: 120px; margin-right: 10px;">Tổng tiền</label>
+        <input type="text" id="so_tien_display" inputmode="numeric" placeholder="0" class="money-input-field" style="width: 120px; margin-right: 5px;" oninput="formatMoneyTyping(this, document.getElementById('so_tien'))">
+        <input type="hidden" name="so_tien" id="so_tien">
+        <span class="currency-unit">VNĐ</span>
+      </div>
+             <div style="display: flex; justify-content: center; margin-top: 10px;">
+         <button type="button" onclick="saveGeneralDiaryData()">Lưu thông tin</button>
+       </div>
+      
+    </div>
+  </form>
+</div>
+
+<!-- Modal thông báo lỗi -->
+<div id="errorModal" class="error-modal" style="display: none;">
+  <div class="error-modal-content">
+    <div class="error-modal-header">
+      <h3>Thông báo lỗi</h3>
+      <span class="error-close" onclick="closeErrorModal()">&times;</span>
+    </div>
+    <div class="error-modal-body">
+      <p id="errorMessage"></p>
+    </div>
+    <div class="error-modal-footer">
+      <button onclick="closeErrorModal()" class="error-ok-btn">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal thông báo thành công (riêng trang) -->
+<div id="generalDiarySuccessModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:2000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+  <div class="modal-content" style="background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+    <div class="modal-header" style="justify-content:center; background:linear-gradient(135deg,#28a745,#20c997); padding:20px; border-radius:12px 12px 0 0;">
+      <h3 style="margin:0; text-align:center; color:#fff;">Thành công</h3>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <div style="text-align:center;">
+        <i class="fas fa-check-circle" style="font-size:48px; color:#28a745; margin-bottom:15px;"></i>
+        <p id="generalDiarySuccessMessage" style="font-size:16px; margin:0; color:#333;">Thao tác thành công!</p>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex; justify-content:center; gap:10px; padding:16px;">
+      <button type="button" id="btnGeneralDiarySuccessOK" style="background:#28a745; color:#fff; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-size:14px;">OK</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+// Function để lưu dữ liệu general diary qua API backend
+function saveGeneralDiaryData() {
+  const form = document.getElementById('generalDiaryForm');
+  const formData = new FormData(form);
+  
+     // Lấy dữ liệu từ form
+   const data = {
+     ngay_nhap: formData.get('ngay_nhap'),
+     so_hieu: formData.get('so_hieu'),
+     dien_giai: formData.get('dien_giai'),
+     tk_no: formData.get('tk_no'),
+     tk_co: formData.get('tk_co'),
+     so_luong_nhap: parseInt(formData.get('so_luong_nhap') || '0'),
+     so_luong_xuat: parseInt(formData.get('so_luong_xuat') || '0'),
+     so_tien: parseInt(document.getElementById('so_tien').value || '0')
+   };
+  
+     // Không cần kiểm tra dữ liệu bắt buộc - cho phép lưu với dữ liệu trống
+  
+  // Gửi dữ liệu đến backend
+  fetch('{{ BACKEND_URL }}/api/general-diary/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      // Sử dụng global popup thay vì modal riêng
+      if (window.openPopup) {
+        window.openPopup('success', 'Lưu thông tin thành công!');
+      } else {
+        showGeneralDiarySuccess('Lưu thông tin thành công!');
+      }
+      form.reset();
+      document.getElementById('so_tien_display').value = '';
+      document.getElementById('so_tien').value = '';
+      // Reload dữ liệu bảng
+      loadGeneralDiaryData();
+    } else {
+      // Sử dụng global popup cho lỗi
+      if (window.openPopup) {
+        window.openPopup('error', 'Lỗi: ' + (result.message || 'Không thể lưu thông tin'));
+      } else {
+        showErrorModal('Lỗi: ' + (result.message || 'Không thể lưu thông tin'));
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Sử dụng global popup cho lỗi
+    if (window.openPopup) {
+      window.openPopup('error', 'Lỗi kết nối: ' + error.message);
+    } else {
+      showErrorModal('Lỗi kết nối: ' + error.message);
+    }
+  });
+}
+
+// Function để load dữ liệu general diary
+function loadGeneralDiaryData() {
+  fetch('{{ BACKEND_URL }}/api/general-diary/')
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      displayGeneralDiaryData(data.data || []);
+    } else {
+      console.error('Lỗi load dữ liệu:', data.message);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+  });
+}
+
+// Function để hiển thị dữ liệu general diary
+function displayGeneralDiaryData(data) {
+  const tbody = document.getElementById('data-table-body');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '';
+  
+     if (data.length === 0) {
+     tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px; color: #666;">Chưa có dữ liệu nhập liệu. Vui lòng nhập thông tin ở form bên trên.</td></tr>';
+     return;
+   }
+  
+  data.forEach((entry, index) => {
+    const row = document.createElement('tr');
+    row.setAttribute('data-entry-id', entry.id);
+         row.innerHTML = `
+       <td class="stt-cell">${index + 1}</td>
+       <td>${entry.ngay_nhap || ''}</td>
+       <td>${entry.so_hieu || ''}</td>
+       <td>${entry.dien_giai || ''}</td>
+       <td>${entry.tk_no || ''}</td>
+       <td>${entry.tk_co || ''}</td>
+       <td>${entry.so_luong_nhap || 0}</td>
+       <td>${entry.so_luong_xuat || 0}</td>
+       <td>${(entry.so_tien || 0).toLocaleString('vi-VN')} VNĐ</td>
+       <td style="text-align:center;">
+         <button class="btn-action btn-edit" data-id="${entry.id}"><i class="fas fa-edit"></i> Sửa</button>
+         <button class="btn-action btn-delete" data-id="${entry.id}" data-code="${entry.so_hieu}"><i class="fas fa-trash"></i> Xóa</button>
+       </td>
+     `;
+    tbody.appendChild(row);
+  });
+  
+  // Áp dụng phân quyền sau khi load dữ liệu
+  if (window.applyPermissionsToUI) {
+    window.applyPermissionsToUI();
+  }
+}
+
+// Function để hiển thị modal thành công
+function showGeneralDiarySuccess(message) {
+  const modal = document.getElementById('generalDiarySuccessModal');
+  const messageEl = document.getElementById('generalDiarySuccessMessage');
+  if (messageEl) messageEl.textContent = message;
+  if (modal) modal.style.display = 'flex';
+}
+
+// Function để hiển thị modal lỗi
+function showErrorModal(message) {
+  const modal = document.getElementById('errorModal');
+  const messageEl = document.getElementById('errorMessage');
+  if (messageEl) messageEl.textContent = message;
+  if (modal) modal.style.display = 'block';
+}
+
+// Function để đóng modal lỗi
+function closeErrorModal() {
+  const modal = document.getElementById('errorModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Validation functions
+function validatePositiveInteger(input) {
+  let value = input.value;
+  value = value.replace(/[^\d]/g, '');
+  if (value === '') {
+    input.value = '';
+    return;
+  }
+  let num = parseInt(value);
+  if (num < 0) {
+    num = 0;
+  }
+  input.value = num;
+}
+
+// Money formatting function
+function formatMoneyTyping(sourceInput, hiddenInput) {
+  const raw = (sourceInput.value || '').replace(/[^0-9]/g, '');
+  if (!raw) {
+    sourceInput.value = '';
+    if (hiddenInput) hiddenInput.value = '';
+    return;
+  }
+  if (hiddenInput) hiddenInput.value = raw;
+  sourceInput.value = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  // Load dữ liệu ban đầu
+  loadGeneralDiaryData();
+  
+  // Event listener cho nút OK trong modal thành công
+  const successBtn = document.getElementById('btnGeneralDiarySuccessOK');
+  if (successBtn) {
+    successBtn.addEventListener('click', function() {
+      const modal = document.getElementById('generalDiarySuccessModal');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+  
+  // Event listener cho nút đóng modal lỗi
+  const errorCloseBtn = document.querySelector('.error-close');
+  if (errorCloseBtn) {
+    errorCloseBtn.addEventListener('click', closeErrorModal);
+  }
+  
+  // Event listener cho nút OK trong modal lỗi
+  const errorOkBtn = document.querySelector('.error-ok-btn');
+  if (errorOkBtn) {
+    errorOkBtn.addEventListener('click', closeErrorModal);
+  }
+  
+  // Event listener cho edit/delete buttons
+  document.addEventListener('click', function(e) {
+    const editBtn = e.target.closest('.btn-edit');
+    const deleteBtn = e.target.closest('.btn-delete');
+    
+    if (editBtn) {
+      const id = editBtn.getAttribute('data-id');
+      editGeneralDiaryEntry(id);
+    } else if (deleteBtn) {
+      const id = deleteBtn.getAttribute('data-id');
+      const code = deleteBtn.getAttribute('data-code');
+      confirmDeleteGeneralDiaryEntry(id, code);
+    }
+  });
+  
+  // Áp dụng phân quyền cho trang general_diary
+  if (window.checkUserPermissions) {
+    window.checkUserPermissions();
+  }
+});
+
+// Function để sửa entry
+function editGeneralDiaryEntry(id) {
+  // Implement edit functionality
+  console.log('Edit entry:', id);
+}
+
+// Function để xác nhận xóa entry
+function confirmDeleteGeneralDiaryEntry(id, code) {
+  if (window.showConfirm) { return window.showConfirm(`Bạn có chắc chắn muốn xóa entry "${code}"?`, function(){ deleteGeneralDiaryEntry(id); }); }
+  if (window.openPopup) { return window.openPopup('confirm', `Bạn có chắc chắn muốn xóa entry "${code}"?`, function(){ deleteGeneralDiaryEntry(id); }); }
+  if (confirm(`Bạn có chắc chắn muốn xóa entry "${code}"?`)) { deleteGeneralDiaryEntry(id); }
+}
+
+// Function để xóa entry
+function deleteGeneralDiaryEntry(id) {
+  fetch(`{{ BACKEND_URL }}/api/general-diary/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      // Sử dụng global popup thay vì modal riêng
+      if (window.openPopup) {
+        window.openPopup('success', 'Xóa entry thành công!');
+      } else {
+        showGeneralDiarySuccess('Xóa entry thành công!');
+      }
+      loadGeneralDiaryData();
+    } else {
+      // Sử dụng global popup cho lỗi
+      if (window.openPopup) {
+        window.openPopup('error', 'Lỗi: ' + (result.message || 'Không thể xóa entry'));
+      } else {
+        showErrorModal('Lỗi: ' + (result.message || 'Không thể xóa entry'));
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Sử dụng global popup cho lỗi
+    if (window.openPopup) {
+      window.openPopup('error', 'Lỗi kết nối: ' + error.message);
+    } else {
+      showErrorModal('Lỗi kết nối: ' + error.message);
+    }
+  });
+}
+</script>
+
+{% if success_message %}
+<div id="successMsg" data-msg="{{ success_message }}" style="display:none;"></div>
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    var el = document.getElementById('successMsg');
+    if (!el) return;
+    var msg = el.getAttribute('data-msg') || '';
+    if (msg) { 
+      // Sử dụng global popup thay vì modal riêng
+      if (window.openPopup) {
+        window.openPopup('success', msg);
+      } else {
+        showGeneralDiarySuccess(msg);
+      }
+    }
+  });
+</script>
+{% endif %}
+
+<!-- Bảng hiển thị thông tin nhập liệu -->
+<div class="data-table-container">
+  <h3>Thông tin nhập liệu</h3>
+  <table class="data-table">
+    <thead>
+      <tr>
+                 <th style="text-align:center;">STT</th>
+         <th style="text-align:center;">Ngày nhập</th>
+         <th style="text-align:center;">Số hiệu</th>
+         <th style="text-align:center;">Diễn giải</th>
+         <th style="text-align:center;">TK nợ</th>
+         <th style="text-align:center;">TK có</th>
+         <th style="text-align:center;">Số lượng nhập</th>
+         <th style="text-align:center;">Số lượng xuất</th>
+         <th style="text-align:center;">Tổng tiền</th>
+         <th style="text-align:center;">Hành động</th>
+      </tr>
+    </thead>
+    <tbody id="data-table-body">
+             <tr>
+         <td colspan="10" style="text-align: center; padding: 20px; color: #666;">
+           Chưa có dữ liệu nhập liệu. Vui lòng nhập thông tin ở form bên trên.
+         </td>
+       </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal chỉnh sửa phát sinh -->
+<div id="edit-general-diary-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 style="text-align: center; width: 100%; margin: 0; color: white;">Chỉnh sửa thông tin phát sinh</h3>
+      <span class="close" onclick="closeEditGeneralDiaryModal()">&times;</span>
+    </div>
+    
+    <form id="edit-general-diary-form" method="POST" onsubmit="return validateEditGeneralDiaryForm()">
+      <input type="hidden" name="general_diary_id" id="edit_general_diary_id">
+      
+      <div class="form-row">
+        <div class="form-group">
+                     <label>Ngày nhập</label>
+           <input type="date" name="ngay_nhap" id="edit_ngay_nhap">
+        </div>
+        <div class="form-group">
+                     <label>Số hiệu</label>
+           <input type="text" name="so_hieu" id="edit_so_hieu">
+        </div>
+      </div>
+      
+             <div class="form-row">
+         <div class="form-group" style="width: 100%;">
+                       <label>Diễn giải</label>
+            <textarea name="dien_giai" id="edit_dien_giai" style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+         </div>
+       </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+                     <label>TK nợ</label>
+           <input type="text" name="tk_no" id="edit_tk_no">
+        </div>
+        <div class="form-group">
+                     <label>TK có</label>
+           <input type="text" name="tk_co" id="edit_tk_co">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Số lượng nhập</label>
+          <input type="number" name="so_luong_nhap" id="edit_so_luong_nhap" min="0" oninput="validatePositiveInteger(this)">
+        </div>
+        <div class="form-group">
+          <label>Số lượng xuất</label>
+          <input type="number" name="so_luong_xuat" id="edit_so_luong_xuat" min="0" oninput="validatePositiveInteger(this)">
+        </div>
+      </div>
+      
+      <div class="form-group" style="display: flex; align-items: center;">
+        <label style="min-width: 120px; margin-right: 10px;">Tổng tiền</label>
+        <input type="text" id="edit_so_tien_display" inputmode="numeric" placeholder="0" class="money-input-field" style="width: 120px; margin-right: 5px;" oninput="formatMoneyTyping(this, document.getElementById('edit_so_tien'))">
+        <input type="hidden" name="so_tien" id="edit_so_tien">
+        <span class="currency-unit">VNĐ</span>
+      </div>
+      
+      <div class="form-actions" style="display: flex; justify-content: center;">
+        <button type="submit" class="save-btn" style="padding: 8px 16px; font-size: 14px;">Cập nhật</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Biến để theo dõi trạng thái thay đổi dữ liệu
+let originalEditData = {};
+let hasDataChanged = false;
+
+// Function để mở modal chỉnh sửa
+function openEditGeneralDiaryModal(id) {
+  // Load dữ liệu entry để chỉnh sửa
+  fetch(`{{ BACKEND_URL }}/api/general-diary/${id}`)
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const entry = data.data;
+      document.getElementById('edit_general_diary_id').value = entry.id;
+      document.getElementById('edit_ngay_nhap').value = entry.ngay_nhap || '';
+      document.getElementById('edit_so_hieu').value = entry.so_hieu || '';
+      
+      document.getElementById('edit_dien_giai').value = entry.dien_giai || '';
+      document.getElementById('edit_tk_no').value = entry.tk_no || '';
+      document.getElementById('edit_tk_co').value = entry.tk_co || '';
+      document.getElementById('edit_so_luong_nhap').value = entry.so_luong_nhap || 0;
+      document.getElementById('edit_so_luong_xuat').value = entry.so_luong_xuat || 0;
+      
+      const soTien = entry.so_tien || 0;
+      document.getElementById('edit_so_tien').value = soTien;
+      document.getElementById('edit_so_tien_display').value = soTien.toLocaleString('vi-VN');
+      
+      // Lưu dữ liệu gốc để so sánh
+      originalEditData = {
+        ngay_nhap: entry.ngay_nhap || '',
+        so_hieu: entry.so_hieu || '',
+        dien_giai: entry.dien_giai || '',
+        tk_no: entry.tk_no || '',
+        tk_co: entry.tk_co || '',
+        so_luong_nhap: entry.so_luong_nhap || 0,
+        so_luong_xuat: entry.so_luong_xuat || 0,
+        so_tien: soTien
+      };
+      hasDataChanged = false;
+      
+      // Thêm event listeners để theo dõi thay đổi
+      addEditFormChangeListeners();
+      
+      document.getElementById('edit-general-diary-modal').style.display = 'block';
+    } else {
+      // Sử dụng global popup cho lỗi
+      if (window.openPopup) {
+        window.openPopup('error', 'Lỗi: ' + (data.message || 'Không thể tải dữ liệu'));
+      } else {
+        showErrorModal('Lỗi: ' + (data.message || 'Không thể tải dữ liệu'));
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Sử dụng global popup cho lỗi
+    if (window.openPopup) {
+      window.openPopup('error', 'Lỗi kết nối: ' + error.message);
+    } else {
+      showErrorModal('Lỗi kết nối: ' + error.message);
+    }
+  });
+}
+
+// Function để thêm event listeners theo dõi thay đổi
+function addEditFormChangeListeners() {
+  const inputs = [
+    'edit_ngay_nhap', 'edit_so_hieu', 'edit_dien_giai', 'edit_tk_no', 'edit_tk_co',
+    'edit_so_luong_nhap', 'edit_so_luong_xuat', 'edit_so_tien_display'
+  ];
+  
+  inputs.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener('input', checkDataChanges);
+      element.addEventListener('change', checkDataChanges);
+    }
+  });
+}
+
+// Function để kiểm tra thay đổi dữ liệu
+function checkDataChanges() {
+  const currentData = {
+    ngay_nhap: document.getElementById('edit_ngay_nhap').value,
+    so_hieu: document.getElementById('edit_so_hieu').value,
+    dien_giai: document.getElementById('edit_dien_giai').value,
+    tk_no: document.getElementById('edit_tk_no').value,
+    tk_co: document.getElementById('edit_tk_co').value,
+    so_luong_nhap: parseInt(document.getElementById('edit_so_luong_nhap').value || '0'),
+    so_luong_xuat: parseInt(document.getElementById('edit_so_luong_xuat').value || '0'),
+    so_tien: parseInt(document.getElementById('edit_so_tien').value || '0')
+  };
+  
+  hasDataChanged = JSON.stringify(currentData) !== JSON.stringify(originalEditData);
+}
+
+// Function để đóng modal chỉnh sửa
+function closeEditGeneralDiaryModal() {
+  if (hasDataChanged) {
+    // Hiển thị popup xác nhận nếu có thay đổi
+    if (window.openPopup) {
+      window.openPopup('confirm', 'Bạn có chắc muốn thoát? Dữ liệu đã thay đổi sẽ bị mất.', () => {
+        forceCloseEditModal();
+      });
+    } else {
+      if (confirm('Bạn có chắc muốn thoát? Dữ liệu đã thay đổi sẽ bị mất.')) {
+        forceCloseEditModal();
+      }
+    }
+  } else {
+    // Đóng trực tiếp nếu không có thay đổi
+    forceCloseEditModal();
+  }
+}
+
+// Function để đóng modal mà không cần xác nhận
+function forceCloseEditModal() {
+  document.getElementById('edit-general-diary-modal').style.display = 'none';
+  hasDataChanged = false;
+  originalEditData = {};
+}
+
+// Function để validate form chỉnh sửa
+function validateEditGeneralDiaryForm() {
+  const form = document.getElementById('edit-general-diary-form');
+  const formData = new FormData(form);
+  
+     const data = {
+     ngay_nhap: formData.get('ngay_nhap'),
+     so_hieu: formData.get('so_hieu'),
+     dien_giai: formData.get('dien_giai'),
+     tk_no: formData.get('tk_no'),
+     tk_co: formData.get('tk_co'),
+     so_luong_nhap: parseInt(formData.get('so_luong_nhap') || '0'),
+     so_luong_xuat: parseInt(formData.get('so_luong_xuat') || '0'),
+     so_tien: parseInt(document.getElementById('edit_so_tien').value || '0')
+   };
+  
+     // Không cần kiểm tra dữ liệu bắt buộc - cho phép cập nhật với dữ liệu trống
+  
+  const id = document.getElementById('edit_general_diary_id').value;
+  
+  // Gửi dữ liệu cập nhật
+  fetch(`{{ BACKEND_URL }}/api/general-diary/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.success) {
+      // Sử dụng global popup thay vì modal riêng
+      if (window.openPopup) {
+        window.openPopup('success', 'Cập nhật thành công!');
+      } else {
+        showGeneralDiarySuccess('Cập nhật thành công!');
+      }
+      // Reset trạng thái thay đổi và đóng modal
+      hasDataChanged = false;
+      originalEditData = {};
+      forceCloseEditModal();
+      loadGeneralDiaryData();
+    } else {
+      // Sử dụng global popup cho lỗi
+      if (window.openPopup) {
+        window.openPopup('error', 'Lỗi: ' + (result.message || 'Không thể cập nhật'));
+      } else {
+        showErrorModal('Lỗi: ' + (result.message || 'Không thể cập nhật'));
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Sử dụng global popup cho lỗi
+    if (window.openPopup) {
+      window.openPopup('error', 'Lỗi kết nối: ' + error.message);
+    } else {
+      showErrorModal('Lỗi kết nối: ' + error.message);
+    }
+  });
+  
+  return false;
+}
+
+// Update edit function to use the new modal
+function editGeneralDiaryEntry(id) {
+  openEditGeneralDiaryModal(id);
+}
+
+// Thêm event listener để đóng modal khi click bên ngoài
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('edit-general-diary-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeEditGeneralDiaryModal();
+      }
+    });
+  }
+});
+</script>
+
+{% endblock %}

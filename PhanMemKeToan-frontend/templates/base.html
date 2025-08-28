@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PHD Computer{% endblock %}</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='1.0') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="sidebar">
+        <!-- Logo -->
+        <div class="logo">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="PHD Logo" />
+        </div>
+
+        <!-- Menu -->
+        <ul>
+            <li><a href="{{ url_for('general_diary') }}" {% if request.endpoint == 'general_diary' %}class="active"{% endif %}><i class="fas fa-home"></i> Nhật ký chung</a></li>
+            <li>
+
+
+              <a href="javascript:void(0)" class="dropdown-btn {% if request.endpoint in ['products','product_groups','prices'] %}active{% endif %}" data-dropdown="products">
+                    <i class="fas fa-box"></i> Quản lý sản phẩm <i class="fas fa-caret-down"></i>
+                </a>
+                <ul class="dropdown-container" {% if request.endpoint in ['products','product_groups','prices'] %}style="display:block;"{% endif %}>
+                    <li><a href="{{ url_for('products') }}" {% if request.endpoint == 'products' %}class="active"{% endif %}>Sản phẩm</a></li>
+                    <li><a href="{{ url_for('product_groups') }}" {% if request.endpoint == 'product_groups' %}class="active"{% endif %}>Quản lý nhóm sản phẩm</a></li>
+                    <li><a href="{{ url_for('prices') }}" {% if request.endpoint == 'prices' %}class="active"{% endif %}>Bảng giá</a></li>
+                </ul>
+            </li>
+            <li><a href="{{ url_for('orders') }}"><i class="fas fa-shopping-cart"></i> Đơn hàng</a></li>
+            <li><a href="{{ url_for('invoices') }}"><i class="fas fa-file-invoice"></i> Hóa đơn</a></li>
+            <li><a href="{{ url_for('warehouse') }}"><i class="fas fa-warehouse"></i> Kho hàng</a></li>
+            <li><a href="{{ url_for('reports') }}"><i class="fas fa-chart-line"></i> Báo cáo</a></li>
+            <li><a href="{{ url_for('account_management') }}"><i class="fas fa-users-cog"></i> Quản lý tài khoản</a></li>
+        </ul>
+    </div>
+
+    <!-- User Account Header -->
+    <div class="user-account-header" title="Click để mở rộng khung tài khoản">
+        <div class="user-info">
+            <i class="fas fa-user-circle"></i>
+            <span class="username" id="username-display">
+                {% if session.get('username') %}
+                    {{ session.get('username') }}
+                {% else %}
+                    Khách
+                {% endif %}
+            </span>
+        </div>
+        <div class="user-actions">
+            <button class="switch-account-btn" onclick="openSwitchAccountModal()">
+                <i class="fas fa-exchange-alt"></i> Chuyển TK
+            </button>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Global Notification Modal -->
+    <div id="globalNotificationModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+      <div class="modal-content" style="max-width:480px;">
+        <div id="globalNotificationHeader" class="modal-header" style="justify-content:center;">
+          <h3 id="globalNotificationTitle" style="margin:0; text-align:center; color:#fff;">Thông báo</h3>
+        </div>
+        <div class="modal-body" style="padding:20px; text-align:center;">
+          <div>
+            <i id="globalNotificationIcon" class="fas fa-info-circle" style="font-size:48px; margin-bottom:15px;"></i>
+            <p id="globalNotificationMessage" style="font-size:16px; margin:0; color:#333;">Tin nhắn</p>
+          </div>
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:center; gap:10px; padding:16px;">
+          <button type="button" id="btnGlobalNotificationOK" style="background:#1976d2; color:#fff; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-size:14px;">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal chuyển tài khoản -->
+    <div id="switchAccountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="color: white; text-align: center; width: 100%; margin: 0;">Chuyển tài khoản</h3>
+                <span class="close" onclick="closeSwitchAccountModal()">&times;</span>
+            </div>
+            <form id="switchAccountForm">
+                <div class="form-group">
+                    <label>Tên đăng nhập *</label>
+                    <input type="text" id="switchUsername" placeholder="Nhập tên đăng nhập" required>
+                </div>
+                <div class="form-group">
+                    <label>Mật khẩu *</label>
+                    <input type="password" id="switchPassword" placeholder="Nhập mật khẩu" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="save-btn">Đăng nhập</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const dropdown = document.querySelector('.dropdown-btn');
+        dropdown.addEventListener('click', function () {
+          // Nếu dropdown đã active (đang ở trang con), không toggle
+          if (this.classList.contains('active') && 
+              (window.location.pathname.includes('/products') || 
+               window.location.pathname.includes('/product-groups') || 
+               window.location.pathname.includes('/prices'))) {
+            return;
+          }
+          
+          this.classList.toggle('active');
+          const container = this.nextElementSibling;
+          if (container.style.display === "block") {
+            container.style.display = "none";
+          } else {
+            container.style.display = "block";
+          }
+        });
+
+        // Xử lý form chuyển tài khoản
+        const switchAccountForm = document.getElementById('switchAccountForm');
+        if (switchAccountForm) {
+          switchAccountForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            switchAccount();
+          });
+          
+          // Thêm event listener cho phím Enter trên các input field
+          const usernameInput = document.getElementById('switchUsername');
+          const passwordInput = document.getElementById('switchPassword');
+          
+          if (usernameInput) {
+            usernameInput.addEventListener('keypress', function(e) {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                switchAccount();
+              }
+            });
+          }
+          
+          if (passwordInput) {
+            passwordInput.addEventListener('keypress', function(e) {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                switchAccount();
+              }
+            });
+          }
+        }
+
+        // Xử lý click vào khung tài khoản để mở rộng/thu gọn
+        const userAccountHeader = document.querySelector('.user-account-header');
+        if (userAccountHeader) {
+          userAccountHeader.addEventListener('click', function(e) {
+            // Chỉ toggle khi click vào khung chính, không phải vào các nút
+            if (e.target === this || e.target.closest('.user-info')) {
+              this.classList.toggle('expanded');
+              
+              // Thêm hiệu ứng focus để người dùng biết đã click
+              this.style.outline = '2px solid #007bff';
+              this.style.outlineOffset = '2px';
+              
+              // Xóa outline sau 300ms
+              setTimeout(() => {
+                this.style.outline = '';
+                this.style.outlineOffset = '';
+              }, 300);
+            }
+          });
+
+          // Ngăn chặn event bubbling từ các nút
+          const buttons = userAccountHeader.querySelectorAll('button');
+          buttons.forEach(button => {
+            button.addEventListener('click', function(e) {
+              e.stopPropagation();
+            });
+          });
+
+          // Tự động thu gọn khi click ra ngoài
+          document.addEventListener('click', function(e) {
+            if (!userAccountHeader.contains(e.target)) {
+              userAccountHeader.classList.remove('expanded');
+            }
+          });
+
+          // Thu gọn khi nhấn ESC
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              userAccountHeader.classList.remove('expanded');
+            }
+          });
+
+          // Thêm hiệu ứng hover cho icon
+          const userIcon = userAccountHeader.querySelector('.user-info i');
+          if (userIcon) {
+            userIcon.addEventListener('mouseenter', function() {
+              this.style.color = '#0056b3';
+            });
+            
+            userIcon.addEventListener('mouseleave', function() {
+              this.style.color = '#007bff';
+            });
+          }
+        }
+
+        // Cập nhật tên người dùng từ session
+        updateUsername();
+        
+        // Kiểm tra session từ server để đảm bảo tên người dùng được hiển thị đúng
+        setTimeout(() => {
+          checkSessionAndUpdate();
+        }, 500);
+      });
+
+      // Hàm cập nhật tên người dùng
+      function updateUsername() {
+        const usernameElement = document.getElementById('username-display');
+        if (usernameElement) {
+          // Lấy tên người dùng từ session
+          const currentUsername = '{{ session.get("username", "") }}';
+          const userId = '{{ session.get("user_id", "") }}';
+          
+          console.log('🔍 Debug updateUsername:');
+          console.log('  - Session username:', currentUsername);
+          console.log('  - Session user_id:', userId);
+          console.log('  - Username element:', usernameElement);
+          
+          if (currentUsername && currentUsername.trim() !== '' && currentUsername !== 'None') {
+            // Nếu có tên người dùng thực, hiển thị
+            usernameElement.textContent = currentUsername;
+            console.log('✅ Cập nhật tên người dùng:', currentUsername);
+          } else {
+            // Nếu không có tên người dùng, hiển thị "Khách"
+            usernameElement.textContent = 'Khách';
+            console.log('⚠️ Không có tên người dùng, hiển thị "Khách"');
+            console.log('  - Lý do: currentUsername =', currentUsername);
+          }
+        } else {
+          console.error('❌ Không tìm thấy element username-display');
+        }
+      }
+
+      // Mở modal chuyển tài khoản
+      function openSwitchAccountModal() {
+        document.getElementById('switchAccountModal').style.display = 'block';
+        document.getElementById('switchAccountForm').reset();
+      }
+
+      // Đóng modal chuyển tài khoản
+      function closeSwitchAccountModal() {
+        document.getElementById('switchAccountModal').style.display = 'none';
+      }
+
+      // Xử lý chuyển tài khoản
+      async function switchAccount() {
+        const username = document.getElementById('switchUsername').value;
+        const password = document.getElementById('switchPassword').value;
+
+        if (!username || !password) {
+          if (window.showErrorModal) { showErrorModal('Vui lòng nhập đầy đủ thông tin!'); } else { alert('Vui lòng nhập đầy đủ thông tin!'); }
+          return;
+        }
+
+        try {
+          console.log('🔐 Đang chuyển tài khoản:', { username, password: '***' });
+          
+          const response = await fetch('/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+          });
+
+          console.log('📡 Response status:', response.status);
+          console.log('📡 Response ok:', response.ok);
+
+          if (response.ok) {
+            // Đăng nhập thành công, reload trang
+            console.log('✅ Đăng nhập thành công, reload trang...');
+            window.location.reload();
+          } else {
+            try {
+              const data = await response.json();
+              console.log('❌ Đăng nhập thất bại:', data);
+              
+              // Kiểm tra nếu tài khoản bị vô hiệu hóa
+              if (data.error && data.error.includes('Tài khoản đã bị tắt')) {
+                if (window.showErrorModal) { 
+                  showErrorModal('Tài khoản đang bị vô hiệu hóa!'); 
+                } else { 
+                  alert('Tài khoản đang bị vô hiệu hóa!'); 
+                }
+              } else {
+                if (window.showErrorModal) { 
+                  showErrorModal(data.error || 'Đăng nhập thất bại!'); 
+                } else { 
+                  alert(data.error || 'Đăng nhập thất bại!'); 
+                }
+              }
+            } catch (parseError) {
+              console.error('❌ Lỗi parse response:', parseError);
+              if (window.showErrorModal) { 
+                showErrorModal('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.'); 
+              } else { 
+                alert('Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.'); 
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error trong switchAccount:', error);
+          console.error('❌ Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          });
+          
+          if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            if (window.showErrorModal) { 
+              showErrorModal('Không thể kết nối đến server! Vui lòng kiểm tra kết nối mạng.'); 
+            } else { 
+              alert('Không thể kết nối đến server! Vui lòng kiểm tra kết nối mạng.'); 
+            }
+          } else {
+            if (window.showErrorModal) { 
+              showErrorModal('Có lỗi xảy ra khi chuyển tài khoản! Vui lòng thử lại.'); 
+            } else { 
+              alert('Có lỗi xảy ra khi chuyển tài khoản! Vui lòng thử lại.'); 
+            }
+          }
+        }
+      }
+
+      // Xử lý logout
+      function logout() {
+        // Đăng xuất trực tiếp không cần xác nhận
+        fetch('/logout', { method: 'POST' })
+          .then(() => {
+            window.location.href = '/login';
+          })
+          .catch(() => {
+            window.location.href = '/login';
+          });
+      }
+
+      // Đóng modal khi click bên ngoài
+      document.addEventListener('click', function(event) {
+        const modal = document.getElementById('switchAccountModal');
+        if (event.target === modal) {
+          closeSwitchAccountModal();
+        }
+      });
+
+      // Cập nhật tên người dùng khi session thay đổi
+      function refreshUserInfo() {
+        updateUsername();
+      }
+
+      // Gọi hàm cập nhật khi cần thiết
+      window.refreshUserInfo = refreshUserInfo;
+
+      // Hàm kiểm tra session và cập nhật tên người dùng
+      function checkSessionAndUpdate() {
+        console.log('🔍 Kiểm tra session và cập nhật tên người dùng...');
+        
+        // Kiểm tra session từ server
+        fetch('/check-session', { 
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => {
+            console.log('📡 Check-session response status:', response.status);
+            console.log('📡 Check-session response ok:', response.ok);
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+          })
+          .then(data => {
+            console.log('📡 Session data từ server:', data);
+            
+            if (data.username && data.username.trim() !== '') {
+              const usernameElement = document.getElementById('username-display');
+              if (usernameElement) {
+                usernameElement.textContent = data.username;
+                console.log('✅ Đã cập nhật tên người dùng từ server:', data.username);
+              }
+            } else {
+              console.log('⚠️ Không có username trong session từ server');
+              updateUsername(); // Fallback về template
+            }
+          })
+          .catch(error => {
+            console.error('❌ Lỗi khi kiểm tra session:', error);
+            console.error('❌ Error details:', {
+              name: error.name,
+              message: error.message,
+              stack: error.stack
+            });
+            updateUsername(); // Fallback về template
+          });
+      }
+
+      // Hàm force refresh user info
+      window.forceRefreshUserInfo = function() {
+        console.log('🔄 Force refresh user info...');
+        checkSessionAndUpdate();
+      };
+
+      // Debug function để kiểm tra khung tài khoản
+      window.debugUserHeader = function() {
+        console.log('🔍 Debug User Account Header:');
+        console.log('  - Username element:', document.getElementById('username-display'));
+        console.log('  - Current username:', document.getElementById('username-display')?.textContent);
+        console.log('  - Session username:', '{{ session.get("username", "") }}');
+        console.log('  - Session user_id:', '{{ session.get("user_id", "") }}');
+        console.log('  - Is expanded:', document.querySelector('.user-account-header')?.classList.contains('expanded'));
+        console.log('  - Header element:', document.querySelector('.user-account-header'));
+        console.log('  - Session data:', {
+          username: '{{ session.get("username", "") }}',
+          user_id: '{{ session.get("user_id", "") }}'
+        });
+        
+        // Kiểm tra thêm
+        console.log('  - Template username check:', '{{ session.get("username") }}');
+        console.log('  - Template user_id check:', '{{ session.get("user_id") }}');
+        console.log('  - Template session exists:', '{{ session }}');
+        
+        // Gọi hàm kiểm tra session
+        console.log('🔄 Gọi checkSessionAndUpdate...');
+        checkSessionAndUpdate();
+      };
+
+
+
+      // Gọi debug function khi cần thiết
+      if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+        console.log('🔧 Debug functions available:');
+        console.log('  - window.debugUserHeader() - Kiểm tra khung tài khoản');
+        console.log('  - window.forceRefreshUserInfo() - Force refresh thông tin người dùng');
+        console.log('  - window.refreshUserInfo() - Cập nhật thông tin người dùng');
+
+        
+        // Tự động debug khi load trang
+        setTimeout(() => {
+          console.log('🔍 Auto-debug user header...');
+          window.debugUserHeader();
+        }, 1000);
+      }
+    </script>
+    <script>
+      // Global permission management
+      window.userPermissions = {
+        isAdmin: false,
+        canDelete: false,
+        canManageEmployees: false
+      };
+
+      // Function to check user permissions globally
+      function checkUserPermissions() {
+        const username = '{{ session.get("username", "") }}';
+        console.log('🔐 Checking global permissions for user:', username);
+        
+        // Kiểm tra quyền admin
+        window.userPermissions.isAdmin = username === 'admin';
+        window.userPermissions.canDelete = username === 'admin';
+        window.userPermissions.canManageEmployees = username === 'admin';
+        
+        console.log('🔐 Global user permissions:', window.userPermissions);
+        
+        // Áp dụng phân quyền cho giao diện
+        applyPermissionsToUI();
+      }
+
+      // Function to apply permissions to UI globally
+      function applyPermissionsToUI() {
+        // Ẩn/hiện tất cả các nút xóa dựa trên quyền
+        const deleteButtons = document.querySelectorAll('.btn-delete, .btn-action.btn-delete, .btn-delete-order, .btn-delete-product, .btn-delete-price, .btn-delete-invoice, .btn-delete-warehouse, .btn-delete-account, .btn-delete-employee, .btn-delete-group, .btn-delete-warehouse');
+        deleteButtons.forEach(btn => {
+          if (window.userPermissions.canDelete) {
+            btn.style.display = 'inline-block';
+          } else {
+            btn.style.display = 'none';
+          }
+        });
+
+        // Ẩn/hiện các nút xóa trong bảng dựa trên class và onclick
+        const tableDeleteButtons = document.querySelectorAll('button[onclick*="delete"], button[onclick*="confirmDelete"], .delete-btn, .remove-btn, button[onclick*="deleteOrder"], button[onclick*="deleteProduct"], button[onclick*="deletePrice"], button[onclick*="deleteInvoice"], button[onclick*="deleteWarehouse"], button[onclick*="deleteAccount"], button[onclick*="deleteEmployee"], button[onclick*="deleteGroup"], button[data-id][data-code]');
+        tableDeleteButtons.forEach(btn => {
+          if (window.userPermissions.canDelete) {
+            btn.style.display = 'inline-block';
+          } else {
+            btn.style.display = 'none';
+          }
+        });
+
+        // Thêm selector cụ thể cho các button có icon trash (nút xóa)
+        const trashButtons = document.querySelectorAll('button i.fa-trash, button i.fas.fa-trash');
+        trashButtons.forEach(icon => {
+          const button = icon.closest('button');
+          if (button && !window.userPermissions.canDelete) {
+            button.style.display = 'none';
+          }
+        });
+
+        console.log('🔐 Applied permissions to UI - Delete buttons hidden for non-admin users');
+      }
+
+      // Expose functions globally
+      window.checkUserPermissions = checkUserPermissions;
+      window.applyPermissionsToUI = applyPermissionsToUI;
+
+      // Auto-check permissions when page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        checkUserPermissions();
+        
+        // Tự động đánh dấu dropdown button active khi ở trang con
+        markActiveDropdownMenu();
+      });
+      
+      // Hàm đánh dấu dropdown menu active dựa trên URL hiện tại
+      function markActiveDropdownMenu() {
+        const currentPath = window.location.pathname;
+        
+        // Kiểm tra các trang con của "Quản lý sản phẩm"
+        if (currentPath.includes('/products') || 
+            currentPath.includes('/product-groups') || 
+            currentPath.includes('/prices')) {
+          
+          // Tìm dropdown button "Quản lý sản phẩm"
+          const productDropdown = document.querySelector('.dropdown-btn[data-dropdown="products"]');
+          if (productDropdown) {
+            productDropdown.classList.add('active');
+            
+            // Mở dropdown container
+            const dropdownContainer = productDropdown.nextElementSibling;
+            if (dropdownContainer && dropdownContainer.classList.contains('dropdown-container')) {
+              dropdownContainer.style.display = 'block';
+            }
+            
+            // Đánh dấu submenu item active
+            let activeSubmenu = null;
+            if (currentPath.includes('/products')) {
+              activeSubmenu = document.querySelector('.dropdown-container a[href*="products"]');
+            } else if (currentPath.includes('/product-groups')) {
+              activeSubmenu = document.querySelector('.dropdown-container a[href*="product-groups"]');
+            } else if (currentPath.includes('/prices')) {
+              activeSubmenu = document.querySelector('.dropdown-container a[href*="prices"]');
+            }
+            
+            if (activeSubmenu) {
+              activeSubmenu.classList.add('active');
+            }
+          }
+        }
+        
+        // Đánh dấu các menu items khác
+        markOtherMenuItems(currentPath);
+      }
+      
+      // Hàm đánh dấu các menu items khác
+      function markOtherMenuItems(currentPath) {
+        // Đánh dấu "Nhật ký chung"
+        if (currentPath === '/' || currentPath.includes('/general-diary')) {
+          const generalDiaryLink = document.querySelector('.sidebar a[href="/"]');
+          if (generalDiaryLink) {
+            generalDiaryLink.classList.add('active');
+          }
+        }
+        
+        // Đánh dấu "Đơn hàng"
+        if (currentPath.includes('/orders')) {
+          const ordersLink = document.querySelector('.sidebar a[href="/orders"]');
+          if (ordersLink) {
+            ordersLink.classList.add('active');
+          }
+        }
+        
+        // Đánh dấu "Hóa đơn"
+        if (currentPath.includes('/invoices')) {
+          const invoicesLink = document.querySelector('.sidebar a[href="/invoices"]');
+          if (invoicesLink) {
+            invoicesLink.classList.add('active');
+          }
+        }
+        
+        // Đánh dấu "Kho hàng"
+        if (currentPath.includes('/warehouse')) {
+          const warehouseLink = document.querySelector('.sidebar a[href="/warehouse"]');
+          if (warehouseLink) {
+            warehouseLink.classList.add('active');
+          }
+        }
+        
+        // Đánh dấu "Báo cáo"
+        if (currentPath.includes('/reports')) {
+          const reportsLink = document.querySelector('.sidebar a[href="/reports"]');
+          if (reportsLink) {
+            reportsLink.classList.add('active');
+          }
+        }
+        
+        // Đánh dấu "Quản lý tài khoản"
+        if (currentPath.includes('/account-management')) {
+          const accountLink = document.querySelector('.sidebar a[href="/account-management"]');
+          if (accountLink) {
+            accountLink.classList.add('active');
+          }
+        }
+      }
+    </script>
+    <script>
+      // Global popup helpers and alert override
+      (function(){
+        const modal = document.getElementById('globalNotificationModal');
+        const header = document.getElementById('globalNotificationHeader');
+        const title = document.getElementById('globalNotificationTitle');
+        const icon = document.getElementById('globalNotificationIcon');
+        const msgEl = document.getElementById('globalNotificationMessage');
+        const okBtn = document.getElementById('btnGlobalNotificationOK');
+        let onCloseHandler = null;
+
+        function setStyleByType(type){
+          // type: success | error | info | warning
+          let bg = '#1976d2', ic = 'fa-info-circle', icColor = '#1976d2', text = 'Thông báo';
+          if (type === 'success'){ bg = '#28a745'; ic = 'fa-check-circle'; icColor = '#28a745'; text = 'Thành công'; }
+          else if (type === 'error'){ bg = '#dc3545'; ic = 'fa-exclamation-triangle'; icColor = '#dc3545'; text = 'Lỗi'; }
+          else if (type === 'warning'){ bg = '#ffc107'; ic = 'fa-exclamation-circle'; icColor = '#e0a800'; text = 'Cảnh báo'; }
+          header.style.background = bg;
+          title.textContent = text;
+          icon.className = `fas ${ic}`;
+          icon.style.color = icColor;
+        }
+
+        function openPopup(type, message, onClose){
+          try{
+            setStyleByType(type||'info');
+            msgEl.textContent = (message==null? '': String(message));
+            onCloseHandler = (typeof onClose === 'function') ? onClose : null;
+            modal.style.display = 'flex';
+          }catch(_){ /* noop */ }
+        }
+
+        function closePopup(){
+          modal.style.display = 'none';
+          if (onCloseHandler){ try{ onCloseHandler(); }catch(_){} }
+          onCloseHandler = null;
+        }
+
+        if (okBtn){ okBtn.addEventListener('click', closePopup); }
+        window.addEventListener('click', function(e){ if (e.target === modal) closePopup(); });
+
+        // Expose globally
+        window.showPopup = function(type, message, onClose){ openPopup(type, message, onClose); };
+        window.showSuccessModal = function(message, onClose){ openPopup('success', message, onClose); };
+        window.showErrorModal = function(message, onClose){ openPopup('error', message, onClose); };
+        window.showInfoModal = function(message, onClose){ openPopup('info', message, onClose); };
+        window.hideSuccessModal = closePopup; // backward compat
+        window.hideErrorModal = closePopup;
+
+        // Override native alert to popup
+        if (!window.__alert_overridden__) {
+          const nativeAlert = window.alert;
+          window.alert = function(message){
+            try{
+              // Ưu tiên hiển thị lỗi qua showErrorModal nếu có chữ "lỗi" trong nội dung
+              const msg = (message==null? '': String(message));
+              const lower = msg.toLowerCase();
+              if (lower.includes('lỗi') || lower.includes('error')) {
+                if (window.showErrorModal) { showErrorModal(msg); return; }
+              }
+              openPopup('info', msg);
+            } catch(_){ nativeAlert(message); }
+          };
+          window.__alert_overridden__ = true;
+        }
+
+        // Add confirm popup support (thống nhất, không fallback confirm native để tránh xung đột)
+        window.openPopup = function(type, message, onClose, onCancel) {
+          if (type === 'confirm') {
+            // Hiển thị hộp thoại xác nhận bằng popup chuẩn
+            setStyleByType('warning');
+            title.textContent = 'Xác nhận';
+            msgEl.textContent = (message==null? '': String(message));
+            onCloseHandler = null;
+            const footer = modal.querySelector('.modal-footer');
+            const okBtnRef = document.getElementById('btnGlobalNotificationOK');
+            // Ẩn nút OK mặc định và chèn nhóm nút xác nhận
+            if (okBtnRef) okBtnRef.style.display = 'none';
+            let group = document.getElementById('__popupConfirmGroup');
+            if (!group) {
+              group = document.createElement('div');
+              group.id = '__popupConfirmGroup';
+              group.innerHTML = '<button id="__popupConfirmYes" style="background:#dc3545; color:#fff; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-size:14px;">Đồng ý</button> <button id="__popupConfirmNo" style="background:#6c757d; color:#fff; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-size:14px;">Hủy</button>';
+              footer.appendChild(group);
+            }
+            modal.style.display = 'flex';
+            const yes = document.getElementById('__popupConfirmYes');
+            const no = document.getElementById('__popupConfirmNo');
+            const cleanup = ()=>{
+              // Xóa nhóm nút xác nhận và khôi phục nút OK mặc định
+              const g = document.getElementById('__popupConfirmGroup');
+              if (g && g.parentElement) g.parentElement.removeChild(g);
+              if (okBtnRef) okBtnRef.style.display = '';
+            };
+            if (yes) yes.onclick = function(){ modal.style.display='none'; cleanup(); if (typeof onClose==='function') onClose(); };
+            if (no) no.onclick = function(){ modal.style.display='none'; cleanup(); if (typeof onCancel==='function') onCancel(); };
+          } else {
+            openPopup(type, message, onClose);
+          }
+        };
+
+        // Alias tiện dụng cho confirm
+        window.showConfirm = function(message, onYes, onNo){ window.openPopup('confirm', message, onYes, onNo); };
+      })();
+    </script>
+    <script>
+      // Normalize backend host for all fetch calls (localhost vs 127.0.0.1)
+      (function(){
+        if (!window.__fetch_patched__) {
+          const originalFetch = window.fetch;
+          function normalizeUrl(url){
+            try{
+              if (typeof url !== 'string') return url;
+              const u = new URL(url, window.location.origin);
+              if (u.hostname === 'localhost' || u.hostname === '127.0.0.1'){
+                u.hostname = window.location.hostname;
+                return u.toString();
+              }
+              return url;
+            }catch(_){ return url; }
+          }
+          window.fetch = function(resource, init){
+            try{
+              if (typeof resource === 'string') {
+                resource = normalizeUrl(resource);
+              } else if (resource && typeof resource.url === 'string') {
+                const n = normalizeUrl(resource.url);
+                if (n !== resource.url) resource = new Request(n, resource);
+              }
+            }catch(_){ /* noop */ }
+            return originalFetch.call(this, resource, init);
+          };
+          window.__fetch_patched__ = true;
+        }
+      })();
+    </script>
+</body>
+</html> 

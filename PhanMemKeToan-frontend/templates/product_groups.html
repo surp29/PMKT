@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}Quản lý nhóm sản phẩm{% endblock %}
+{% block content %}
+
+<h2><i class="fas fa-layer-group"></i> Quản lý nhóm sản phẩm</h2>
+
+<div class="filter-bar">
+  <div class="filter-item">
+    <label>Nhóm Sản Phẩm</label>
+    <input type="text" class="search-input" id="search-input" placeholder="Nhập tên nhóm sản phẩm">
+  </div>
+</div>
+<div class="toolbar">
+  <span style="margin-left:auto;color:#000;">Tổng: <strong class="total-count">{{ groups|length if groups else 0 }}</strong> nhóm sản phẩm | Tổng số lượng: <strong>{{ total_quantity if total_quantity else 0 }}</strong></span>
+</div>
+
+<table class="product-table">
+  <thead>
+    <tr>
+      <th style="text-align:center;">STT</th>
+      <th style="text-align:center;">Nhóm Sản Phẩm</th>
+      <th style="text-align:center;">Số Lượng</th>
+      <th style="text-align:center;">Mô tả</th>
+      <th style="text-align:center;">Hành động</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if groups %}
+      {% for group in groups %}
+        <tr data-group-id="{{ group.id }}">
+          <td style="text-align:center;">{{ loop.index }}</td>
+          <td style="text-align:center;">{{ group.ten_nhom }}</td>
+          <td style="text-align:center;">{{ group.so_luong if group.so_luong else 0 }}</td>
+          <td style="text-align:left;">
+            <div class="description-cell" data-group-name="{{ group.ten_nhom }}" data-group-id="{{ group.id or '' }}" data-description="{{ group.mo_ta or '' }}" onclick="editDescription(this.dataset.groupName, this.dataset.groupId)" style="cursor: pointer; min-height: 20px; padding: 8px; border-radius: 4px; transition: all 0.2s; border: 1px solid transparent;" onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.borderColor='#007bff';" onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor='transparent';">
+              {{ group.mo_ta if group.mo_ta else 'Click để thêm mô tả...' }}
+            </div>
+          </td>
+          <td style="text-align:center;">
+            <div style="display:flex;gap:5px;justify-content:center;">
+              <button class="btn-delete-group" data-group="{{ group.ten_nhom }}" data-count="{{ group.so_luong if group.so_luong else 0 }}" style="width:60px;height:32px;background:#dc3545;color:white;border:none;border-radius:3px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;gap:3px;transition:all 0.2s;" onmouseover="this.style.background='#c82333';" onmouseout="this.style.background='#dc3545';">
+                <i class="fas fa-trash"></i> Xóa
+              </button>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    {% else %}
+      <tr><td colspan="5" style="text-align:center;">Không có dữ liệu nhóm sản phẩm.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<!-- Summary row below table -->
+<div class="toolbar" style="margin-top: 15px;">
+  <span style="margin-left:auto;color:#000;">Tổng: <strong class="total-count">{{ groups|length if groups else 0 }}</strong> nhóm sản phẩm | Tổng số lượng: <strong>{{ total_quantity if total_quantity else 0 }}</strong></span>
+</div>
+
+<!-- Notification Modal -->
+<div id="notificationModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);">
+    <div style="background-color: white; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div style="background: linear-gradient(135deg, #007bff, #0056b3); padding: 25px; border-radius: 12px 12px 0 0;">
+            <h2 id="notificationTitle" style="color: white; text-align: center; width: 100%; margin: 0; font-size: 20px; font-weight: bold;">Thông báo</h2>
+        </div>
+        <div style="padding: 0;">
+            <div style="text-align: center; padding: 30px;">
+                <i id="notificationIcon" style="font-size: 60px; margin-bottom: 20px; display: block;"></i>
+                <p id="notificationMessage" style="margin: 0; font-size: 16px; line-height: 1.6; color: #333;"></p>
+            </div>
+        </div>
+        <div style="padding: 25px; border-top: 1px solid #dee2e6; display: flex; justify-content: center;">
+            <button onclick="closeNotificationModal()" style="padding: 12px 30px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; background-color: #28a745; color: white; transition: all 0.3s ease; min-width: 100px;">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);">
+    <div style="background-color: white; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+        <div style="background: linear-gradient(135deg, #007bff, #0056b3); padding: 25px; border-radius: 12px 12px 0 0;">
+            <h2 style="color: white; text-align: center; width: 100%; margin: 0; font-size: 20px; font-weight: bold;">Xác nhận</h2>
+        </div>
+        <div style="padding: 0;">
+            <div style="text-align: center; padding: 30px;">
+                <i class="fas fa-question-circle" style="font-size: 60px; color: #007bff; margin-bottom: 20px; display: block;"></i>
+                <p id="confirmMessage" style="margin: 0; font-size: 16px; line-height: 1.6; color: #333;"></p>
+            </div>
+        </div>
+        <div style="padding: 25px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between;">
+            <button onclick="closeConfirmModal()" style="padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; background-color: #6c757d; color: white; transition: all 0.3s ease; min-width: 100px;">Hủy</button>
+            <button onclick="confirmDelete()" style="padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; background-color: #dc3545; color: white; transition: all 0.3s ease; min-width: 100px;">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentDeleteGroupId = null;
+
+function deleteProductGroup(groupName, productCount) {
+    if (productCount > 0) {
+        showNotification('Cảnh báo', 'fas fa-exclamation-triangle', '#ffc107', 
+                        'Không thể xóa nhóm sản phẩm này vì còn ' + productCount + ' sản phẩm trong kho!');
+        return;
+    }
+    currentDeleteGroupId = groupName;
+    showConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa nhóm sản phẩm "' + groupName + '" này?');
+}
+
+function confirmDelete() {
+    if (!currentDeleteGroupId) return;
+    
+    // Xóa mô tả khỏi localStorage
+    const descriptions = JSON.parse(localStorage.getItem('groupDescriptions') || '{}');
+    delete descriptions[currentDeleteGroupId];
+    localStorage.setItem('groupDescriptions', JSON.stringify(descriptions));
+    
+    if (window.showSuccessModal) { showSuccessModal('Đã xóa nhóm sản phẩm thành công!'); }
+    setTimeout(() => location.reload(), 800);
+    closeConfirmModal();
+}
+
+function showNotification(title, icon, color, message) {
+    const modal = document.getElementById('notificationModal');
+    const titleEl = document.getElementById('notificationTitle');
+    const iconEl = document.getElementById('notificationIcon');
+    const messageEl = document.getElementById('notificationMessage');
+    if (titleEl) titleEl.textContent = title;
+    if (iconEl) { iconEl.className = icon; iconEl.style.color = color; }
+    if (messageEl) messageEl.textContent = message;
+    if (modal) modal.style.display = 'block';
+}
+
+function showConfirm(title, message) {
+    const modal = document.getElementById('confirmModal');
+    const messageEl = document.getElementById('confirmMessage');
+    if (messageEl) messageEl.textContent = message;
+    if (modal) modal.style.display = 'block';
+}
+
+function closeNotificationModal() {
+    const modal = document.getElementById('notificationModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.style.display = 'none';
+    currentDeleteGroupId = null;
+}
+
+// Delegate delete buttons
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.btn-delete-group');
+  if (!btn) return;
+  const name = btn.dataset.group;
+  const count = parseInt(btn.dataset.count||'0',10);
+  deleteProductGroup(name, count);
+});
+
+// Load mô tả từ localStorage khi trang load
+document.addEventListener('DOMContentLoaded', function() {
+  const descriptions = JSON.parse(localStorage.getItem('groupDescriptions') || '{}');
+  const descriptionCells = document.querySelectorAll('.description-cell');
+  
+  descriptionCells.forEach(cell => {
+    const groupName = cell.getAttribute('data-group-name');
+    const savedDescription = descriptions[groupName];
+    if (savedDescription) {
+      cell.innerHTML = savedDescription;
+      cell.setAttribute('data-description', savedDescription);
+    }
+  });
+  
+  // Áp dụng phân quyền cho trang product_groups
+  if (window.checkUserPermissions) {
+    window.checkUserPermissions();
+  }
+});
+
+// Tìm kiếm với fuzzy search linh hoạt
+const searchInput = document.getElementById('search-input');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('.product-table tbody tr');
+    let visibleCount = 0;
+    rows.forEach((row) => {
+      const groupName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+      const normalizedGroupName = groupName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const normalizedSearchTerm = searchTerm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const filterChars = normalizedSearchTerm.split('');
+      const nameChars = normalizedGroupName.split('');
+      let charIndex = 0;
+      for (let i = 0; i < nameChars.length && charIndex < filterChars.length; i++) {
+        const currentChar = nameChars[i];
+        const searchChar = filterChars[charIndex];
+        const similarChars = { 'd':['d','đ'],'đ':['d','đ'],'i':['i','y'],'y':['i','y'],'u':['u','ư'],'ư':['u','ư'],'o':['o','ô','ơ'],'ô':['o','ô','ơ'],'ơ':['o','ô','ơ'],'a':['a','ă','â'],'ă':['a','ă','â'],'â':['a','ă','â'],'e':['e','ê'],'ê':['e','ê'] };
+        const isSimilar = similarChars[searchChar] && similarChars[searchChar].includes(currentChar);
+        if (currentChar === searchChar || isSimilar) { charIndex++; }
+      }
+      const found = charIndex === filterChars.length;
+      if (found) {
+        row.style.display = '';
+        visibleCount++;
+        const sttCell = row.querySelector('td:nth-child(1)');
+        if (sttCell) sttCell.textContent = visibleCount;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+}
+
+// Chỉnh sửa mô tả
+function editDescription(groupName, groupId) {
+  const cell = document.querySelector(`[data-group-name="${groupName}"]`);
+  const currentText = cell.getAttribute('data-description') || '';
+  const textarea = document.createElement('textarea');
+  textarea.value = currentText;
+  textarea.style.width = '100%';
+  textarea.style.minHeight = '60px';
+  textarea.style.padding = '5px';
+  textarea.style.border = '1px solid #007bff';
+  textarea.style.borderRadius = '3px';
+  textarea.style.fontSize = '14px';
+  textarea.style.fontFamily = 'inherit';
+  textarea.style.resize = 'vertical';
+  cell.innerHTML = '';
+  cell.appendChild(textarea);
+  textarea.focus();
+  textarea.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) { e.preventDefault(); saveDescription(groupName, textarea.value, cell, groupId); }
+  });
+  textarea.addEventListener('blur', function(){ setTimeout(()=>saveDescription(groupName, textarea.value, cell, groupId), 100); });
+}
+
+async function saveDescription(groupName, newDescription, cell, groupId) {
+  // Cập nhật DB qua API (nếu có id), nếu chưa có thì tạo nhanh nhóm theo tên
+  try {
+    let id = groupId;
+    if (!id) {
+      const rCreate = await fetch(`{{ BACKEND_URL }}/api/product-groups/`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ten_nhom: groupName, mo_ta: newDescription }) });
+      const dCreate = await rCreate.json();
+      if (dCreate && dCreate.id) id = dCreate.id;
+    } else {
+      await fetch(`{{ BACKEND_URL }}/api/product-groups/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ mo_ta: newDescription }) });
+    }
+  } catch (e) { /* fallback to local only */ }
+
+  // Luôn lưu local để trang products còn dùng được như trước
+  const descriptions = JSON.parse(localStorage.getItem('groupDescriptions') || '{}');
+  descriptions[groupName] = newDescription;
+  localStorage.setItem('groupDescriptions', JSON.stringify(descriptions));
+
+  // Cập nhật UI
+  cell.innerHTML = newDescription || 'Click để thêm mô tả...';
+  cell.setAttribute('data-description', newDescription);
+  cell.style.cursor = 'pointer';
+  if (window.showSuccessModal) { showSuccessModal('Đã cập nhật mô tả nhóm sản phẩm!'); }
+}
+</script>
+
+{% endblock %}
